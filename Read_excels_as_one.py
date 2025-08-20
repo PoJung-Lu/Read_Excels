@@ -6,8 +6,11 @@ from utils.output_excel import output_as
 
 parameters = {
     "read_all_sheets": True,  # Set to True if you want to read all sheets in each Excel file
-    "path_data": "../Data",  # Specify the path to your Excel files
-    "pattern": "苗栗縣",  # You can specify a pattern if needed, ['default', '苗栗縣']
+    "sheet_names": "公共危險物品運作資料",  # Specify the sheet name if needed
+    "path_data": "../Data/科技廠救災能量",  # Specify the path to your Excel files
+    # "path_data": "../Test",  # For testing purposes, you can change this to a test folder
+    "pattern": "top_ten_operating_chemicals",  # You can specify a pattern if needed, ['default', '苗栗縣', top_ten_operating_chemicals]
+    "path_output": "/Output",  # Specify the output folder
     "output_path": "Output",  # Specify the output path
     "file_name": "Aggregated_data.xlsx",  # Specify the output file name
 }
@@ -28,6 +31,99 @@ def main():
     #     print(df.keys())
 
 
+def high_tech_industry_main():
+    """Function to handle high-tech industry data processing."""
+    data_reader = read_data.read_data(parameters=parameters)
+    folder_path = data_reader.get_path()
+    data_reader.parameters["output_path"] = (
+        folder_path + data_reader.parameters["path_output"]
+    )
+    # print(f"Folder path: {folder_path}")
+    folders = os.listdir(folder_path)
+    if "Output" in folders:
+        folders.remove("Output")  # Remove the Output folder if it exists
+    # for folder in folders:
+    #     file_path = os.path.join(folder_path, folder)
+    #     data_reader.parameters["folder_path"] = file_path
+    #     print(f"Processing folder: {folder}")
+    #     data_reader.parameters["file_name"] = folder + ".xlsx"
+    #     # Read the Excel file
+    #     if data_reader.parameters["pattern"] == "default":
+    #         print("Pattern is default")
+    #         combined_data = data_reader.read_excel_files()
+
+    #     else:
+    #         print(f"Reading with pattern: {data_reader.parameters['pattern']}")
+    #         combined_data = data_reader.read_with_pattern(
+    #             {}, {}, data_reader.parameters["pattern"]
+    #         )
+    #     output_as(
+    #         combined_data, data_reader.parameters
+    #     )  # Output the combined data to an Excel file
+    # print("All folders processed successfully.")
+
+    #############    sort required data
+
+    # data_reader.parameters["path_data"] = (
+    #     data_reader.parameters["path_data"] + data_reader.parameters["path_output"]
+    # )
+    # data_reader.parameters["folder_path"] = data_reader.get_path()
+    # data_reader.parameters["pattern"] = "sort_by_location"
+    # data_reader.parameters["file_name"] = "Sorted_data.xlsx"
+    # sorted_data = {"北部園區": [], "中部園區": [], "南部園區": [], "其他": []}
+    # sorted_factory = {"北部園區": [], "中部園區": [], "南部園區": [], "其他": []}
+
+    # for f, (r, v) in data_reader.read_excel_files():
+    #     print(f"Processing file: {f}", r)
+    #     sorted_data[r].extend(v)
+    #     sorted_factory[r].append(f)
+    #     # print(sum(i.shape[0] for i in sorted_data[r]))
+
+    # print("Data sorted by location:", sorted_data.keys())
+    # print("Factory sorted by location:", sorted_factory)
+
+    # sorted_data = {
+    #     k: pd.concat(v, ignore_index=True) if v else pd.DataFrame()
+    #     for k, v in sorted_data.items()
+    # }
+    # output_as(sorted_data, data_reader.parameters)
+
+    ############## Analyze data
+
+    data_reader.parameters["path_data"] = (
+        (data_reader.parameters["path_data"] + data_reader.parameters["path_output"])
+        if not data_reader.parameters["path_output"]
+        in data_reader.parameters["path_data"]
+        else data_reader.parameters["path_data"]
+    )
+
+    data_reader.parameters["folder_path"] = data_reader.get_path()
+    data_reader.parameters["file_name"] = "result.xlsx"
+    data_reader.parameters["read_all_sheets"] = True
+    keys, values = data_reader.read_one_excel(
+        data_reader.parameters["folder_path"] + "/Sorted_data.xlsx"
+    )
+    for k, v in zip(keys, values):
+        if k == "其他":
+            break
+
+        v.reset_index(inplace=True)
+        gb = v.groupby(
+            [
+                "化學物質名稱",
+                "物質儲存型態",
+                "廠內最大儲存量(公斤)",
+                "廠內最大儲存量(公升)",
+            ]
+        )
+        result = gb["化學物質名稱"].unique()
+
+        # result.reset_index(inplace=True)  # lastly, reset the index
+
+    gb.style
+
+
 if __name__ == "__main__":
 
-    main()
+    # main()
+    high_tech_industry_main()
