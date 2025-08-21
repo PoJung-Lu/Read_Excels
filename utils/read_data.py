@@ -95,7 +95,7 @@ class read_data:
         sheet_name = (
             None if read_all_sheets else sheet_names
         )  # Read all sheets if not specified
-        df = pd.read_excel(file_path, sheet_name=sheet_name)
+        df = pd.read_excel(file_path, sheet_name=sheet_name, thousands=",")
         df_keys = [i for i, j in df.items()]
         df_values = [j.dropna(axis=0, how="all") for i, j in df.items()]
         return df_keys, df_values

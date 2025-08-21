@@ -62,7 +62,7 @@ def high_tech_industry_main():
     #     )  # Output the combined data to an Excel file
     # print("All folders processed successfully.")
 
-    #############    sort required data
+    ############    sort required data
 
     # data_reader.parameters["path_data"] = (
     #     data_reader.parameters["path_data"] + data_reader.parameters["path_output"]
@@ -77,7 +77,7 @@ def high_tech_industry_main():
     #     print(f"Processing file: {f}", r)
     #     sorted_data[r].extend(v)
     #     sorted_factory[r].append(f)
-    #     # print(sum(i.shape[0] for i in sorted_data[r]))
+    #     print(sum(i.shape[0] for i in sorted_data[r]))
 
     # print("Data sorted by location:", sorted_data.keys())
     # print("Factory sorted by location:", sorted_factory)
@@ -98,29 +98,44 @@ def high_tech_industry_main():
     )
 
     data_reader.parameters["folder_path"] = data_reader.get_path()
-    data_reader.parameters["file_name"] = "result.xlsx"
     data_reader.parameters["read_all_sheets"] = True
     keys, values = data_reader.read_one_excel(
         data_reader.parameters["folder_path"] + "/Sorted_data.xlsx"
     )
+
+    sort_column = ["化學物質名稱", "容器材質", "物質儲存型態"]
+    sort_value = ["廠內最大儲存量(公斤)", "廠內最大儲存量(公升)"]
+    sorted_data = [{}, {}, {}]  # [sort_by_hazmat, sort_by_container, sort_by_state]
+    file_name = ["sort_by_hazmat.xlsx", "sort_by_container.xlsx", "sort_by_state.xlsx"]
+
     for k, v in zip(keys, values):
         if k == "其他":
             break
 
-        v.reset_index(inplace=True)
-        gb = v.groupby(
-            [
-                "化學物質名稱",
-                "物質儲存型態",
-                "廠內最大儲存量(公斤)",
-                "廠內最大儲存量(公升)",
-            ]
+        v["化學物質名稱"] = v["化學物質名稱"].astype(str)
+        # Convert "廠內最大儲存量(公斤)" to float, using pandas string method, str.extract().
+        v["廠內最大儲存量(公斤)"] = (
+            v["廠內最大儲存量(公斤)"]
+            .astype(str)
+            # .str.replace("M3", "000")
+            .str.extract(r"(\d+\.?\d*)")
+            .astype(float)
         )
-        result = gb["化學物質名稱"].unique()
+        v["廠內最大儲存量(公升)"] = (
+            v["廠內最大儲存量(公升)"]
+            .astype(str)
+            # .str.replace("M3", "000")
+            .str.extract(r"(\d+\.?\d*)")
+            .astype(float)
+        )
 
-        # result.reset_index(inplace=True)  # lastly, reset the index
+        for c, d, n in zip(sort_column, sorted_data, file_name):
+            d[k] = (v.groupby([c])[sort_value].sum().reset_index()).sort_values(
+                by=sort_value[::-1], ascending=[False, False]
+            )
 
-    gb.style
+            data_reader.parameters["file_name"] = n
+            output_as(d, data_reader.parameters)
 
 
 if __name__ == "__main__":
