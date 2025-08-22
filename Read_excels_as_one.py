@@ -156,25 +156,122 @@ def high_tech_industry_rescue_equipment_main():
     if "Output" in folders:
         folders.remove("Output")  # Remove the Output folder if it exists
 
-    for folder in folders:
-        file_path = os.path.join(folder_path, folder)
-        data_reader.parameters["folder_path"] = file_path
-        print(f"Processing folder: {folder}")
-        data_reader.parameters["file_name"] = folder + ".xlsx"
-        # Read the Excel file
-        print(f"Reading with pattern: {data_reader.parameters['pattern']}")
+    # for folder in folders:
+    #     file_path = os.path.join(folder_path, folder)
+    #     data_reader.parameters["folder_path"] = file_path
+    #     print(f"Processing folder: {folder}")
+    #     data_reader.parameters["file_name"] = folder + ".xlsx"
+    #     # Read the Excel file
+    #     print(f"Reading with pattern: {data_reader.parameters['pattern']}")
 
-        combined_data = defaultdict(list)
-        for f, (k, v) in data_reader.read_excel_files():
-            if len(k) == 0:
-                print(f"No data found in {f}. Skipping.")
-            else:
-                combined_data[k[0]].append(v)
-        output_as(
-            combined_data, data_reader.parameters
-        )  # Output the combined data to an Excel file
-    print("All folders processed successfully.")
+    #     combined_data = defaultdict(list)
+    #     for f, (k, v) in data_reader.read_excel_files():
+    #         if len(k) == 0:
+    #             print(f"No data found in {f}. Skipping.")
+    #         else:
+    #             print("df_keys", k)
+    #             print("df_values", (v.shape))
+    #             combined_data[k[0]].append(v)
+    #     combined_data = {k:pd.concat(v, ignore_index=True) for k,v in combined_data.items()}
+    #     output_as(
+    #         combined_data, data_reader.parameters
+    #     )  # Output the combined data to an Excel file
+    # print("All folders processed successfully.")
+########################
+    '''Sort data'''
+    # data_reader.parameters["path_data"] = (
+    #     data_reader.parameters["path_data"] + data_reader.parameters["path_output"]+"/Rescue_equipment"
+    # )
+    # data_reader.parameters["folder_path"] = data_reader.get_path()
+    # data_reader.parameters["pattern"] = "sort_by_location"
+    # data_reader.parameters["file_name"] = "Sorted_data.xlsx"
+    # sorted_data = {"北部園區": [], "中部園區": [], "南部園區": [], "其他": []}
+    # sorted_factory = {"北部園區": [], "中部園區": [], "南部園區": [], "其他": []}
 
+    # for f, (r, v) in data_reader.read_excel_files():
+    #     print(f"Processing file: {f}", r)
+    #     sorted_data[r].extend(v)
+    #     sorted_factory[r].append(f)
+    #     print(sum(i.shape[0] for i in sorted_data[r]))
+
+    # print("Data sorted by location:", sorted_data.keys())
+    # print("Factory sorted by location:", sorted_factory)
+
+    # sorted_data = {
+    #     k: pd.concat(v, ignore_index=True) if v else pd.DataFrame()
+    #     for k, v in sorted_data.items()
+    # }
+    # output_as(sorted_data, data_reader.parameters)
+
+    # data_reader.parameters["path_data"] = (
+    #     (data_reader.parameters["path_data"] + data_reader.parameters["path_output"])
+    #     if not data_reader.parameters["path_output"]
+    #     in data_reader.parameters["path_data"]
+    #     else data_reader.parameters["path_data"]
+    # )
+############################# Analyze data
+
+    data_reader.parameters["path_data"] = (
+        (data_reader.parameters["path_data"] + data_reader.parameters["path_output"] + "/Rescue_equipment")
+        if not data_reader.parameters["path_output"]
+        in data_reader.parameters["path_data"]
+        else data_reader.parameters["path_data"]
+    )
+
+    data_reader.parameters["folder_path"] = data_reader.get_path()
+    data_reader.parameters["read_all_sheets"] = True
+    keys, values = data_reader.read_one_excel(
+        data_reader.parameters["folder_path"] + "/Sorted_data.xlsx"
+    )
+
+    sort_column = ["證照", "演練",'應變設備']
+    sort_value = [["證照數量"],["演練數量"],['應變設備數量', '應變設備可支援數量']]
+    sorted_data = [{}, {}, {}]  # [sort_by_hazmat, sort_by_container, sort_by_state]
+    file_name = ["sort_by_certificate.xlsx", "sort_by_training.xlsx", "sort_by_equipment.xlsx"]
+
+    for k, v in zip(keys, values):
+        if k == "其他":
+            break
+        v["證照"] = v["證照"].astype(str)
+        v["演練"] = v["演練"].astype(str)
+        v["應變設備"] = v["應變設備"].astype(str)
+
+        # Convert "廠內最大儲存量(公斤)" to float, using pandas string method, str.extract().
+        v["證照數量"] = (
+            v["證照數量"]
+            .astype(str)
+            # .str.replace("M3", "000")
+            .str.extract(r"(\d+)")
+            .astype(float)
+        )        
+        v["演練數量"] = (
+            v["演練數量"]
+            .astype(str)
+            # .str.replace("M3", "000")
+            .str.extract(r"(\d+)")
+            .astype(float)
+        )
+        v["應變設備數量"] = (
+            v["應變設備數量"]
+            .astype(str)
+            # .str.replace("M3", "000")
+            .str.extract(r"(\d+)")
+            .astype(float)
+        )
+        v["應變設備可支援數量"] = (
+            v["應變設備可支援數量"]
+            .astype(str)
+            # .str.replace("M3", "000")
+            .str.extract(r"(\d+)")
+            .astype(float)
+        )
+
+        for c, s, d, n in zip(sort_column, sort_value, sorted_data, file_name):
+            print(k,s)
+            d[k] = (v.groupby([c])[s].sum().reset_index())
+
+            data_reader.parameters["file_name"] = n
+            output_as(d, data_reader.parameters)
 
 if __name__ == "__main__":
 

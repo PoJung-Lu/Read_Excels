@@ -219,7 +219,7 @@ def other_pattern(self, keys, values, pattern):
             elif ("應變設備" in i) & (len(i) < 31):
 
                 drop_rows = [
-                    (True if "如欄位不敷使用" in str(i) else False)
+                    (True if ("如欄位不敷使用" in str(i) or ("設備名稱" in str(i))) else False)
                     for i in j.iloc[:, 1]
                 ]
                 df = j.iloc[:, [1, 6, 7]]
@@ -237,11 +237,12 @@ def other_pattern(self, keys, values, pattern):
         if len(df_keys) != 0:
             df = pd.DataFrame.from_dict(dfs, orient="index")
             df = df.transpose()
-            df = df.dropna(axis=0, how="all")
-            df_values.append(df)
+            df_values = df.dropna(axis=0, how="all")
+
             # stacked_df = stacked_df.drop(stacked_df[a].index)
-            print("df_keys", df_keys)
-            print("df_values", df_values)
+            # print("df_keys", df_keys)
+            # print("df_values", df_values)
+
         else:
             pass
 
