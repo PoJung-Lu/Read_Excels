@@ -2,16 +2,16 @@ import os
 import pandas as pd
 import utils.read_data as read_data
 from utils.output_excel import output_as
-
+from collections import defaultdict
 
 parameters = {
     "read_all_sheets": True,  # Set to True if you want to read all sheets in each Excel file
     "sheet_names": "公共危險物品運作資料",  # Specify the sheet name if needed
     "path_data": "../Data/科技廠救災能量",  # Specify the path to your Excel files
     # "path_data": "../Test",  # For testing purposes, you can change this to a test folder
-    "pattern": "top_ten_operating_chemicals",  # You can specify a pattern if needed, ['default', '苗栗縣', top_ten_operating_chemicals]
+    "pattern": "top_ten_operating_chemicals",  # You can specify a pattern if needed, ['default', '苗栗縣', top_ten_operating_chemicals, sort_by_location, industry_rescue_equipment]
     "path_output": "/Output",  # Specify the output folder
-    "output_path": "Output",  # Specify the output path
+    # "output_path": "Output",  # Specify the output path
     "file_name": "Aggregated_data.xlsx",  # Specify the output file name
 }
 
@@ -31,7 +31,7 @@ def main():
     #     print(df.keys())
 
 
-def high_tech_industry_main():
+def high_tech_industry_chems_main():
     """Function to handle high-tech industry data processing."""
     data_reader = read_data.read_data(parameters=parameters)
     folder_path = data_reader.get_path()
@@ -42,51 +42,51 @@ def high_tech_industry_main():
     folders = os.listdir(folder_path)
     if "Output" in folders:
         folders.remove("Output")  # Remove the Output folder if it exists
-    # for folder in folders:
-    #     file_path = os.path.join(folder_path, folder)
-    #     data_reader.parameters["folder_path"] = file_path
-    #     print(f"Processing folder: {folder}")
-    #     data_reader.parameters["file_name"] = folder + ".xlsx"
-    #     # Read the Excel file
-    #     if data_reader.parameters["pattern"] == "default":
-    #         print("Pattern is default")
-    #         combined_data = data_reader.read_excel_files()
+    for folder in folders:
+        file_path = os.path.join(folder_path, folder)
+        data_reader.parameters["folder_path"] = file_path
+        print(f"Processing folder: {folder}")
+        data_reader.parameters["file_name"] = folder + ".xlsx"
+        # Read the Excel file
+        if data_reader.parameters["pattern"] == "default":
+            print("Pattern is default")
+            combined_data = data_reader.read_excel_files()
 
-    #     else:
-    #         print(f"Reading with pattern: {data_reader.parameters['pattern']}")
-    #         combined_data = data_reader.read_with_pattern(
-    #             {}, {}, data_reader.parameters["pattern"]
-    #         )
-    #     output_as(
-    #         combined_data, data_reader.parameters
-    #     )  # Output the combined data to an Excel file
-    # print("All folders processed successfully.")
+        else:
+            print(f"Reading with pattern: {data_reader.parameters['pattern']}")
+            combined_data = data_reader.read_with_pattern(
+                {}, {}, data_reader.parameters["pattern"]
+            )
+        output_as(
+            combined_data, data_reader.parameters
+        )  # Output the combined data to an Excel file
+    print("All folders processed successfully.")
 
-    ############    sort required data
+    ###########    sort required data
 
-    # data_reader.parameters["path_data"] = (
-    #     data_reader.parameters["path_data"] + data_reader.parameters["path_output"]
-    # )
-    # data_reader.parameters["folder_path"] = data_reader.get_path()
-    # data_reader.parameters["pattern"] = "sort_by_location"
-    # data_reader.parameters["file_name"] = "Sorted_data.xlsx"
-    # sorted_data = {"北部園區": [], "中部園區": [], "南部園區": [], "其他": []}
-    # sorted_factory = {"北部園區": [], "中部園區": [], "南部園區": [], "其他": []}
+    data_reader.parameters["path_data"] = (
+        data_reader.parameters["path_data"] + data_reader.parameters["path_output"]
+    )
+    data_reader.parameters["folder_path"] = data_reader.get_path()
+    data_reader.parameters["pattern"] = "sort_by_location"
+    data_reader.parameters["file_name"] = "Sorted_data.xlsx"
+    sorted_data = {"北部園區": [], "中部園區": [], "南部園區": [], "其他": []}
+    sorted_factory = {"北部園區": [], "中部園區": [], "南部園區": [], "其他": []}
 
-    # for f, (r, v) in data_reader.read_excel_files():
-    #     print(f"Processing file: {f}", r)
-    #     sorted_data[r].extend(v)
-    #     sorted_factory[r].append(f)
-    #     print(sum(i.shape[0] for i in sorted_data[r]))
+    for f, (r, v) in data_reader.read_excel_files():
+        print(f"Processing file: {f}", r)
+        sorted_data[r].extend(v)
+        sorted_factory[r].append(f)
+        print(sum(i.shape[0] for i in sorted_data[r]))
 
-    # print("Data sorted by location:", sorted_data.keys())
-    # print("Factory sorted by location:", sorted_factory)
+    print("Data sorted by location:", sorted_data.keys())
+    print("Factory sorted by location:", sorted_factory)
 
-    # sorted_data = {
-    #     k: pd.concat(v, ignore_index=True) if v else pd.DataFrame()
-    #     for k, v in sorted_data.items()
-    # }
-    # output_as(sorted_data, data_reader.parameters)
+    sorted_data = {
+        k: pd.concat(v, ignore_index=True) if v else pd.DataFrame()
+        for k, v in sorted_data.items()
+    }
+    output_as(sorted_data, data_reader.parameters)
 
     ############## Analyze data
 
@@ -113,6 +113,7 @@ def high_tech_industry_main():
             break
 
         v["化學物質名稱"] = v["化學物質名稱"].astype(str)
+        v["容器材質"] = v["容器材質"].astype(str)
         # Convert "廠內最大儲存量(公斤)" to float, using pandas string method, str.extract().
         v["廠內最大儲存量(公斤)"] = (
             v["廠內最大儲存量(公斤)"]
@@ -138,7 +139,45 @@ def high_tech_industry_main():
             output_as(d, data_reader.parameters)
 
 
+def high_tech_industry_rescue_equipment_main():
+    """
+    Function to handle high-tech industry rescue equipment data processing.
+    """
+    data_reader = read_data.read_data(parameters=parameters)
+    folder_path = data_reader.get_path()
+    print(f"Folder path: {folder_path}")
+    data_reader.parameters["output_path"] = (
+        folder_path + data_reader.parameters["path_output"] + "/Rescue_equipment"
+    )
+    data_reader.parameters["pattern"] = "industry_rescue_equipment"
+
+    # print(f"Folder path: {folder_path}")
+    folders = os.listdir(folder_path)
+    if "Output" in folders:
+        folders.remove("Output")  # Remove the Output folder if it exists
+
+    for folder in folders:
+        file_path = os.path.join(folder_path, folder)
+        data_reader.parameters["folder_path"] = file_path
+        print(f"Processing folder: {folder}")
+        data_reader.parameters["file_name"] = folder + ".xlsx"
+        # Read the Excel file
+        print(f"Reading with pattern: {data_reader.parameters['pattern']}")
+
+        combined_data = defaultdict(list)
+        for f, (k, v) in data_reader.read_excel_files():
+            if len(k) == 0:
+                print(f"No data found in {f}. Skipping.")
+            else:
+                combined_data[k[0]].append(v)
+        output_as(
+            combined_data, data_reader.parameters
+        )  # Output the combined data to an Excel file
+    print("All folders processed successfully.")
+
+
 if __name__ == "__main__":
 
     # main()
-    high_tech_industry_main()
+    # high_tech_industry_chems_main()
+    high_tech_industry_rescue_equipment_main()

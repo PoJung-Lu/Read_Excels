@@ -1,6 +1,7 @@
 import pandas as pd
 import os
 import numpy as np
+from collections import defaultdict
 
 
 def other_pattern(self, keys, values, pattern):
@@ -51,14 +52,14 @@ def other_pattern(self, keys, values, pattern):
         ]
         return df_keys, df_values
     elif pattern == "top_ten_operating_chemicals":
-
         folder_path = self.parameters["folder_path"]
         read_all_sheets = self.parameters["read_all_sheets"]
         pattern = self.parameters["pattern"]
         files = os.listdir(folder_path)
         print(f"Folder path: {folder_path}")
         excel_files = [f for f in files if f.endswith((".xlsx", ".xls", "ods"))]
-        dfs = {}
+
+        dfs = defaultdict(list)
         for file in excel_files:
             file_path = os.path.join(folder_path, file)
             df = pd.read_excel(
@@ -105,14 +106,16 @@ def other_pattern(self, keys, values, pattern):
                         value.columns = column_names
                     else:
                         value.columns = column_names[:16]
-                    df_values.append(value)
+                    df_values.append(
+                        value
+                    )  ###################### no need to be list, df_values only should be ok, but verify required
                 else:
                     pass
 
             if len(df_keys) == 0:
                 print(f"No data found in {file}. Skipping.")
             else:
-                stacked_df = self.stack_tables(df_keys, df_values)
+                stacked_df = self.stack_tables(df_keys, df_values)  ########## no need
                 stacked_df.columns = value.columns
                 drop_if_contains = ["No.", "範例1", "範例2", "公共危險物品運作資料"]
                 a = [
@@ -122,7 +125,10 @@ def other_pattern(self, keys, values, pattern):
                 stacked_df = stacked_df.drop(columns="No.")
                 stacked_df = stacked_df.dropna(axis=0, how="all")
 
-                dfs[df_keys[0]] = stacked_df
+                # dfs[df_keys[0]] = stacked_df
+                dfs[df_keys[0]].append(stacked_df)
+
+        dfs = {k: pd.concat(v, ignore_index=True) for k, v in dfs.items()}
         return dfs  # Return the dictionary of DataFrames
 
     elif pattern == "sort_by_location":
@@ -150,6 +156,96 @@ def other_pattern(self, keys, values, pattern):
             print("Location not found in any region")
             region = "其他"
         return region, values
+
+    elif pattern == "industry_rescue_equipment":
+        """
+        Args:
+            keys (list):  sheet names of excel that is reaad in.
+            values (list):  list of dfs correspond to the sheet.
+        """
+        dfs = defaultdict(
+            list
+        )  # keys:['基本資料', '基本資料內容', '證照','證照數量','演練','演練數量','應變設備','應變設備數量']
+        df_keys = []
+        df_values = []
+        for i, j in zip(keys, values):
+            if ("基本資料" in i) & (len(i) < 31):
+                sheet_name = j.iloc[1, 6]
+                if sheet_name and str(sheet_name) == "nan":
+                    sheet_name = j.iloc[1, 7]
+                df_keys.append(sheet_name)
+                index_title = [[1, 1, 2, 3, 4, 3, 4], [0, 4, 0, 0, 0, 4, 4]]
+                index_value = [[1, 1, 2, 3, 4, 3, 4, 5, 6], [1, 6, 1, 1, 1, 6, 6, 2, 2]]
+
+                dfs["基本資料"].extend(j.values[*index_title])
+                dfs["基本資料"].append("經度")
+                dfs["基本資料"].append("緯度")
+                dfs["基本資料內容"].extend(j.values[*index_value])
+
+            elif ("證照及演練" in i) & (len(i) < 31):
+
+                index_training = j.index[
+                    j.iloc[:, 1].astype(str).str.contains("消防法演練")
+                ].astype(int)[0]
+                print("#################", index_training, j.values[index_training, 1])
+                index_title = [[i for i in range(1, index_training - 1)], [4]]
+                index_value = [[i for i in range(1, index_training - 1)], [7]]
+                index_title_train = [
+                    [
+                        index_training,
+                        index_training,
+                        index_training + 1,
+                        index_training + 1,
+                        index_training + 2,
+                    ],
+                    [1, 5, 1, 5, 1],
+                ]
+                index_value_train = [
+                    [
+                        index_training,
+                        index_training,
+                        index_training + 1,
+                        index_training + 1,
+                        index_training + 2,
+                    ],
+                    [4, 7, 4, 7, 4],
+                ]
+
+                dfs["證照"].extend(j.values[*index_title])
+                dfs["證照數量"].extend(j.values[*index_value])
+                dfs["演練"].extend(j.values[*index_title_train])
+                dfs["演練數量"].extend(j.values[*index_value_train])
+
+            elif ("應變設備" in i) & (len(i) < 31):
+
+                drop_rows = [
+                    (True if "如欄位不敷使用" in str(i) else False)
+                    for i in j.iloc[:, 1]
+                ]
+                df = j.iloc[:, [1, 6, 7]]
+                df = df.drop(df[drop_rows].index)
+                df = df.dropna(axis=0, how="all")
+
+                dfs["應變設備"] = df.iloc[:, 0].values
+                dfs["應變設備數量"] = df.iloc[:, 1].values
+                dfs["應變設備可支援數量"] = df.iloc[:, 2].values
+
+                pass
+            else:
+                pass
+
+        if len(df_keys) != 0:
+            df = pd.DataFrame.from_dict(dfs, orient="index")
+            df = df.transpose()
+            df = df.dropna(axis=0, how="all")
+            df_values.append(df)
+            # stacked_df = stacked_df.drop(stacked_df[a].index)
+            print("df_keys", df_keys)
+            print("df_values", df_values)
+        else:
+            pass
+
+        return df_keys, df_values
 
 
 def analysis_pattern(self, keys, values, pattern):

@@ -97,13 +97,14 @@ class read_data:
         )  # Read all sheets if not specified
         df = pd.read_excel(file_path, sheet_name=sheet_name, thousands=",")
         df_keys = [i for i, j in df.items()]
-        df_values = [j.dropna(axis=0, how="all") for i, j in df.items()]
+        # df_values = [j.dropna(axis=0, how="all") for i, j in df.items()]
+        df_values = [j for i, j in df.items()]
         return df_keys, df_values
 
     def read_excel_files(self):
         """Reads all Excel files in the specified directory and returns a DataFrame.
         Returns:
-        pd.DataFrame: A DataFrame containing the combined data from all Excel files, each sheet correspont to one file.
+        pd.DataFrame: A DataFrame containing the combined data from all Excel files, each sheet corresponds to one file.
         """
         folder_path = self.parameters["folder_path"]
         pattern = self.parameters["pattern"]
@@ -118,6 +119,7 @@ class read_data:
         excel_files = [f for f in files if f.endswith((".xlsx", ".xls", "ods"))]
         dfs = {}
         for file in excel_files:
+            print(f"Reading file: {file}")
             file_path = os.path.join(folder_path, file)
             df_keys, df_values = self.read_one_excel(file_path)
             # dfs[file] = self.read_with_pattern(df_keys, df_values, pattern)
