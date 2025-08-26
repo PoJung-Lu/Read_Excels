@@ -138,9 +138,11 @@ def other_pattern(self, keys, values, pattern):
             values (list): table of specified location.
         """
         print("Pattern is sort_by_location")
-        north_tech = ["新竹", "龍潭", "竹南", "銅鑼"]
+        north_tech = ["竹科", "新竹", "龍潭", "竹南", "銅鑼"]
         mid_tech = ["中", "台中", "后里", "虎尾", "二林"]
         south_tech = ["南", "高雄", "楠梓", "嘉義", "樹谷", "路竹"]
+        # North -> Mid -> south
+        # Although 南 is includede in 竹南, it is sorted already, not affected.
         print(keys)
         if any(location in keys[0] for location in north_tech):
             print("Location is in 北部園區")
@@ -219,7 +221,11 @@ def other_pattern(self, keys, values, pattern):
             elif ("應變設備" in i) & (len(i) < 31):
 
                 drop_rows = [
-                    (True if ("如欄位不敷使用" in str(i) or ("設備名稱" in str(i))) else False)
+                    (
+                        True
+                        if ("如欄位不敷使用" in str(i) or ("設備名稱" in str(i)))
+                        else False
+                    )
                     for i in j.iloc[:, 1]
                 ]
                 df = j.iloc[:, [1, 6, 7]]

@@ -15,8 +15,10 @@ class read_data:
         Initializes the read_data class with the given parameters.
         Args:
         """
+        import copy
+
         ##.get("param", "DefaultParam")
-        self.parameters = parameters
+        self.parameters = copy.deepcopy(parameters)
         self.parameters["folder_path"] = self.get_path()
         self.parameters["read_all_sheets"] = self.parameters.get(
             "read_all_sheets", False
@@ -48,7 +50,7 @@ class read_data:
         # except AttributeError:
         return (
             path + "/Data"
-            if "path_data" not in self.parameters
+            if not ("path_data" in self.parameters)
             else path + "/" + self.parameters["path_data"]
         )
 
