@@ -39,29 +39,32 @@ def high_tech_industry_chems_main():
         folder_path + data_reader.parameters["path_output"]
     )
     # print(f"Folder path: {folder_path}")
+
     folders = os.listdir(folder_path)
     if "Output" in folders:
         folders.remove("Output")  # Remove the Output folder if it exists
+
     for folder in folders:
         file_path = os.path.join(folder_path, folder)
         data_reader.parameters["folder_path"] = file_path
         print(f"Processing folder: {folder}")
         data_reader.parameters["file_name"] = folder + ".xlsx"
         # Read the Excel file
-        if data_reader.parameters["pattern"] == "default":
-            print("Pattern is default")
-            combined_data = data_reader.read_excel_files()
+        print(f"Reading with pattern: {data_reader.parameters['pattern']}")
 
-        else:
-            print(f"Reading with pattern: {data_reader.parameters['pattern']}")
-            combined_data = data_reader.read_with_pattern(
-                {}, {}, data_reader.parameters["pattern"]
-            )
+        combined_data = defaultdict(list)
+        for f, (k, v) in data_reader.read_excel_files():
+            if len(k) == 0:
+                print(f"No data found in {f}. Skipping.")
+            else:
+                combined_data[k[0]].append(v)
+        combined_data = {
+            k: pd.concat(v, ignore_index=True) for k, v in combined_data.items()
+        }
         output_as(
             combined_data, data_reader.parameters
         )  # Output the combined data to an Excel file
     print("All folders processed successfully.")
-
     ###########    sort required data
 
     data_reader.parameters["path_data"] = (
@@ -89,7 +92,6 @@ def high_tech_industry_chems_main():
     output_as(sorted_data, data_reader.parameters)
 
     ############## Analyze data
-
     data_reader.parameters["path_data"] = (
         (data_reader.parameters["path_data"] + data_reader.parameters["path_output"])
         if not data_reader.parameters["path_output"]
@@ -110,7 +112,7 @@ def high_tech_industry_chems_main():
 
     for k, v in zip(keys, values):
         if k == "其他":
-            break
+            continue
         else:
             v["化學物質名稱"] = v["化學物質名稱"].astype(str)
             v["容器材質"] = v["容器材質"].astype(str)
@@ -243,7 +245,7 @@ def high_tech_industry_rescue_equipment_main():
 
     for k, v in zip(keys, values):
         if k == "其他":
-            break
+            continue
         else:
             v["證照"] = v["證照"].astype(str)
             v["演練"] = v["演練"].astype(str)

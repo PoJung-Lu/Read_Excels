@@ -3,6 +3,7 @@ import os
 import numpy as np
 
 
+
 class read_data:
     """
     This class allows you to specify a directory containing Excel files and read them into a pandas DataFrame.
@@ -86,9 +87,7 @@ class read_data:
             # If the pattern is default, stack all sheet-tables to one DataFrame
             df = self.stack_tables(keys, values)
             return df
-
         else:
-
             return self.other_pattern(keys, values, pattern)
 
     def read_one_excel(self, file_path):
@@ -106,6 +105,7 @@ class read_data:
     def read_excel_files(self):
         """Reads all Excel files in the specified directory and returns a DataFrame.
         Returns:
+        file: file name string
         pd.DataFrame: A DataFrame containing the combined data from all Excel files, each sheet corresponds to one file.
         """
         folder_path = self.parameters["folder_path"]
@@ -118,7 +118,9 @@ class read_data:
                 self.parameters["file_name"]
             )  # Remove the Output file if it exists
 
-        excel_files = [f for f in files if f.endswith((".xlsx", ".xls", "ods"))]
+        excel_files = [
+            f for f in files if f.endswith((".xlsx", ".xls", ".xlsm", "ods"))
+        ]
         dfs = {}
         for file in excel_files:
             print(f"Reading file: {file}")
