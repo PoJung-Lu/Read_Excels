@@ -1,7 +1,9 @@
 import pandas as pd
 import os
 import numpy as np
+import copy
 
+from pathlib import Path
 
 
 class read_data:
@@ -16,17 +18,21 @@ class read_data:
         Initializes the read_data class with the given parameters.
         Args:
         """
-        import copy
-
-        ##.get("param", "DefaultParam")
         self.parameters = copy.deepcopy(parameters)
-        self.parameters["folder_path"] = self.get_path()
         self.parameters["read_all_sheets"] = self.parameters.get(
-            "read_all_sheets", False
+            "read_all_sheets", True
         )
         self.parameters["pattern"] = self.parameters.get("pattern", "default")
-
-        # self.data = self.read_excel_files()
+        self.exclude_files = (
+            "Output",
+            "Sorted_data.xlsx",
+            "sort_by_hazmat.xlsx",
+            "sort_by_container.xlsx",
+            "sort_by_state.xlsx",
+            "sort_by_certificate.xlsx",
+            "sort_by_training.xlsx",
+            "sort_by_equipment.xlsx",
+        )
 
     def get_path(self):
         """Returns the path where the Excel files are located.
@@ -54,6 +60,11 @@ class read_data:
             if not ("path_data" in self.parameters)
             else path + "/" + self.parameters["path_data"]
         )
+
+    def list_subfiles(self, root: Path, exclude=()) -> list[Path]:
+        root = Path(root)
+        excl = set(exclude)
+        return [str(p) for p in root.iterdir() if p.is_file() and p.name not in excl]
 
     def stack_tables(self, keys, values):
         """Stacks the tables from the keys and values into a single DataFrame.
@@ -110,8 +121,10 @@ class read_data:
         """
         folder_path = self.parameters["folder_path"]
         pattern = self.parameters["pattern"]
-        files = os.listdir(folder_path)
+        # files = os.listdir(folder_path)
+        files = self.list_subfiles(folder_path, self.exclude_files)
         print(f"Folder path: {folder_path}")
+        print("files", files)
 
         if self.parameters["file_name"] in files:
             files.remove(
@@ -121,6 +134,7 @@ class read_data:
         excel_files = [
             f for f in files if f.endswith((".xlsx", ".xls", ".xlsm", "ods"))
         ]
+        print("excel_files", excel_files)
         dfs = {}
         for file in excel_files:
             print(f"Reading file: {file}")
