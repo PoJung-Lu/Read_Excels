@@ -4,11 +4,76 @@ import numpy as np
 from collections import defaultdict
 
 
+def drop_cells_with_string(df, string, except_str=None):
+    """
+    Replace any cell containing a specific string with NaN (drop cell only).
+    """
+    # 建立布林遮罩：True 表示該 cell 包含該字串
+    contains_A = df.astype(str).apply(
+        lambda x: x.str.contains("|".join(string), na=False)
+    )
+    if except_str:
+        contains_B = df.astype(str).apply(
+            lambda x: x.str.contains("|".join(except_str), na=False)
+        )
+        mask = contains_A & ~contains_B
+    else:
+        mask = contains_A
+    # 用 NaN 替換那些 cell
+    df_clean = df.mask(mask, None)
+    return df_clean
+
+
+def merge_sheets_by_group(
+    dfs: dict,
+    required_keys: list = [
+        "基本資料",
+        "消防車輛設備",
+        "其他救災設備",
+        "國內證書",
+        "國外證書",
+        "火災搶救設備",
+        "個人防護設備",
+        "化災搶救設備",
+        "偵檢警報設備",
+    ],
+) -> dict:
+    df_dict = {}
+    for k, v in dfs.items():
+        if k in required_keys[0]:
+            if "救災能量" in k:
+                continue
+            print("##################################", k)
+            columns = v.columns.tolist()
+            # v[columns[1]] = v[columns[1]].astype(str)
+            g = v.groupby(
+                [columns[0], columns[2]], as_index=False, dropna=False, sort=False
+            ).agg({columns[1]: list, columns[3]: "sum"})
+            df_dict[required_keys[0]] = g.reindex(columns=columns)
+
+        elif k in required_keys[1:3]:
+            print("##################################", k)
+            group_keys = [v.columns[0], v.columns[1], v.columns[2]]
+            df_dict[k] = v.groupby(
+                group_keys, as_index=False, dropna=False, sort=False
+            ).sum()
+        elif k in required_keys[3:]:
+            print("##################################", k)
+            group_keys = [v.columns[0], v.columns[1]]
+            df_dict[k] = v.groupby(
+                group_keys, as_index=False, dropna=False, sort=False
+            ).sum()
+        else:
+            df_dict[k] = v
+    return df_dict
+
+
 def other_pattern(self, keys, values, pattern):
     """Collect and analysis data from keys and values based on a pattern.
-
     Args:
-
+        keys (list): List of keys from the DataFrame.
+        values (list): List of values corresponding to the keys.
+        pattern (str): The pattern to use for reading the data.
 
     Returns:
         pd.DataFrame: Filtered DataFrame.
@@ -17,6 +82,10 @@ def other_pattern(self, keys, values, pattern):
     #     return df[df['pattern'].str.contains(pattern, na=False)]
     # else:
     #     return df[df.apply(lambda row: row.astype(str).str.contains(pattern, na=False).any(), axis=1)]
+    if pattern == "stack_all":
+        # If the pattern is default, stack all sheet-tables to one DataFrame
+        df = self.stack_tables(keys, values)
+        return df
     if pattern == "苗栗縣":
         print("Pattern is 苗栗縣")
         df_keys = [
@@ -31,9 +100,11 @@ def other_pattern(self, keys, values, pattern):
             "其他救災設備",
         ]
         df_values0 = values[0]
-        df_values1 = values[1][:25]
-        df_values2 = values[1][25:]
-        df_values3 = pd.DataFrame(np.array(values[2])[:23, :4])
+        df_values1 = values[1][:24]
+        df_values2 = values[1][24:]
+        df_values3 = pd.DataFrame(
+            np.array(values[2])[:23, :4], columns=[["項次", "車輛名稱", np.nan, "數量"]]
+        )
         df_values4 = pd.DataFrame(np.array(values[2])[:10, 5:8])
         df_values5 = pd.DataFrame(np.array(values[2])[12:22, 5:8])
         df_values6 = pd.DataFrame(np.array(values[2])[:12, 9:12])
@@ -50,6 +121,13 @@ def other_pattern(self, keys, values, pattern):
             df_values7,
             df_values8,
         ]
+        c = 0
+        for i in df_values:
+            print("########", c)
+            c = c + 1
+            print(i)
+        print(pd.DataFrame(v) for v in df_values)
+
         return df_keys, df_values
     elif pattern == "top_ten_operating_chemicals":
         df_keys = []
@@ -119,7 +197,9 @@ def other_pattern(self, keys, values, pattern):
         # North -> Mid -> south
         # Although 南 is includede in 竹南, it is sorted already, not affected.
         print(keys)
-        if any(location in keys[0] for location in north_tech):
+        if any(
+            (location in keys[0]) & (not "路" in keys[0]) for location in north_tech
+        ):
             print("Location is in 北部園區")
             region = "北部園區"
         elif any(location in keys[0] for location in mid_tech):
@@ -137,7 +217,7 @@ def other_pattern(self, keys, values, pattern):
     elif pattern == "industry_rescue_equipment":
         """
         Args:
-            keys (list):  sheet names of excel that is reaad in.
+            keys (list):  sheet names of excel that is read in.
             values (list):  list of dfs correspond to the sheet.
         """
         dfs = defaultdict(
@@ -147,9 +227,9 @@ def other_pattern(self, keys, values, pattern):
         df_values = []
         for i, j in zip(keys, values):
             if ("基本資料" in i) & (len(i) < 31):
-                sheet_name = j.iloc[1, 6]
+                sheet_name = i  # j.iloc[1, 6]
                 if sheet_name and str(sheet_name) == "nan":
-                    sheet_name = j.iloc[1, 7]
+                    sheet_name = j.iloc[1, 6]
                 df_keys.append(sheet_name)
                 index_title = [[1, 1, 2, 3, 4, 3, 4], [0, 4, 0, 0, 0, 4, 4]]
                 index_value = [[1, 1, 2, 3, 4, 3, 4, 5, 6], [1, 6, 1, 1, 1, 6, 6, 2, 2]]
@@ -221,17 +301,99 @@ def other_pattern(self, keys, values, pattern):
 
         else:
             pass
+        return df_keys, df_values
 
+    elif pattern == "firefighter_rescue_survey":
+        """
+        Args:
+            keys (list):  sheet names of excel that is read in.
+            values (list):  list of dfs correspond to the sheet.
+
+        Returns:
+            df_keys (list): list of keys extracted from the sheets.
+            df_values (list): list of DataFrames extracted from the sheets.
+        """
+        NUM_RE = r"(\d+)"
+        dfs = defaultdict(list)
+        required_keys = [
+            "基本資料",
+            "消防車輛設備",
+            "其他救災設備",
+            "國內證書",
+            "國外證書",
+            "火災搶救設備",
+            "個人防護設備",
+            "化災搶救設備",
+            "偵檢警報設備",
+        ]
+        df_keys = []
+        df_values = []
+        for i, j in zip(keys, values):
+            if (required_keys[0] in i) & (len(i) < 31):
+                if "救災能量" in i:
+                    continue
+                df_keys.append(required_keys[0])
+                # sheet_name = j.iloc[1, 1]
+                # df_keys.append(sheet_name)
+                j = drop_cells_with_string(
+                    j,
+                    ["麥寮", "郭ＸＸ", "（05）693－3143", "範例", "-", "範例：１"],
+                    except_str=[
+                        "E-mail",
+                    ],
+                )
+                index_staffs = j.index[
+                    j.iloc[:, 0].astype(str).str.contains("救災能量")
+                ].astype(int)[0]
+                # print("#################", index_staffs, j.values[index_staffs, 0])
+                dfs["基本資料"].extend(j.values[0])
+
+                dfs["基本資料內容"].extend(
+                    j[1:index_staffs].dropna(axis=0, how="all").values.T.tolist()
+                )
+                # print(dfs['基本資料內容'])
+                dfs["人員編制"].extend(j.values[index_staffs + 2 :, 0])
+                dfs["編制數量"].extend(j.values[index_staffs + 2 :, 2].astype(float))
+                df = pd.DataFrame.from_dict(dfs, orient="index")
+                df = df.transpose()
+                df_values.append(df)
+            elif any(r_k in i for r_k in required_keys):
+                df_keys.append(*[r_k for r_k in required_keys if r_k in i])
+                # dfs = {k: v for k, v in j.items() if len(v) > 0}
+                j = drop_cells_with_string(j, ["範例", "-", "範例：１"])
+                equipment = "設備" in i
+                for col in j.columns:
+                    if any(
+                        k in col
+                        for k in ["項次", "訓練證書", "統計人數", "設備", "車輛"]
+                    ):
+                        j[col] = j[col].ffill()
+                    elif equipment:
+                        if "數量" in col:
+                            j[col] = (
+                                pd.DataFrame(j)[col]
+                                .astype(str)
+                                .str.extract(NUM_RE)[0]
+                                .str.replace(",", "", regex=False)
+                                .astype(float)
+                            )
+                        else:
+                            j[col] = j[col].astype(str)
+                            pass
+                    else:
+                        # j[col] = j[col].astype(float)
+                        j[col] = (
+                            pd.DataFrame(j)[col]
+                            .astype(str)
+                            .str.extract(NUM_RE)[0]
+                            .str.replace(",", "", regex=False)
+                            .astype(float)
+                        )
+                df_values.append(j)
+            else:
+                continue
         return df_keys, df_values
 
 
-def analysis_pattern(self, keys, values, pattern):
-    """Reads the pattern from the parameters and returns the corresponding value.
-    Args:
-        keys (list): List of keys from the DataFrame.
-        values (list): List of values corresponding to the keys.
-        pattern (str): The pattern to use for reading the data.
-    """
-
-
 # elif pattern == "analysis": #read with pattern analysis
+# ['大隊長','副大隊長','組長'	,'主任','中隊長','副中隊長','分隊長','組員','小隊長','隊員',]

@@ -17,6 +17,8 @@ class read_data:
         """
         Initializes the read_data class with the given parameters.
         Args:
+        pattern (str): The pattern to use for reading the data in one excel file. Default is "default".
+        read_all_sheets (bool): Whether to read all sheets in the Excel files. Default
         """
         self.parameters = copy.deepcopy(parameters)
         self.parameters["read_all_sheets"] = self.parameters.get(
@@ -95,9 +97,8 @@ class read_data:
         """
         pattern = self.parameters["pattern"]
         if pattern == "default":
-            # If the pattern is default, stack all sheet-tables to one DataFrame
-            df = self.stack_tables(keys, values)
-            return df
+            # If the pattern is default, return keys and values as is
+            return keys, values
         else:
             return self.other_pattern(keys, values, pattern)
 
@@ -108,29 +109,34 @@ class read_data:
             None if read_all_sheets else sheet_names
         )  # Read all sheets if not specified
         df = pd.read_excel(file_path, sheet_name=sheet_name, thousands=",")
-        df_keys = [i for i, j in df.items()]
-        # df_values = [j.dropna(axis=0, how="all") for i, j in df.items()]
-        df_values = [j for i, j in df.items()]
+        df_keys = []
+        df_values = []
+        [(df_keys.append(i), df_values.append(j)) for i, j in df.items()]
         return df_keys, df_values
 
     def read_excel_files(self):
-        """Reads all Excel files in the specified directory and returns a DataFrame.
-        Returns:
-        file: file name string
-        pd.DataFrame: A DataFrame containing the combined data from all Excel files, each sheet corresponds to one file.
+        """
+        Reads and processes all Excel files from specified directory.
+        
+        Parameters (via self.parameters):
+            folder_path (str): Directory containing Excel files
+            pattern (str): Processing pattern to apply
+            file_name (str): Output file name to exclude from processing
+            read_all_sheets (bool): Whether to read all sheets
+
+        Yields:
+            tuple: (file_name, keys, values) for each processed Excel file
         """
         folder_path = self.parameters["folder_path"]
         pattern = self.parameters["pattern"]
         # files = os.listdir(folder_path)
         files = self.list_subfiles(folder_path, self.exclude_files)
         print(f"Folder path: {folder_path}")
-        print("files", files)
 
         if self.parameters["file_name"] in files:
             files.remove(
                 self.parameters["file_name"]
             )  # Remove the Output file if it exists
-
         excel_files = [
             f for f in files if f.endswith((".xlsx", ".xls", ".xlsm", "ods"))
         ]
