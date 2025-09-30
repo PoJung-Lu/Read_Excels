@@ -1,29 +1,19 @@
-import os
 import pandas as pd
-import numpy as np
 from utils.patterns import merge_sheets_by_group
 import utils.read_data as read_data
 from utils.output_excel import output_as
+from utils.data_cleaners import clean_chems, clean_equipment
+from utils.industry_analysis import analyze_grouped
+from utils.firefighter_analysis import analyze_ff_survey_files
 from collections import defaultdict
 from pathlib import Path
 import logging
-from typing import Union
 from typing import Optional
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 # -------------------- 通用工具 --------------------
-# NUM_RE = r"[-+]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?(?:[eE][-+]?\d+)?"
-NUM_RE = r"(\d+\.?\d*)"
 exclude_files = ("Output", "Distribution_by_city")
-
-
-def extract_first_number(s: pd.Series) -> pd.Series:
-    out = (
-        s.astype(str).str.extract(NUM_RE)[0].str.replace(",", "", regex=False)
-    )  # DataFrame series
-    # out = s.astype(str).str.extract(NUM_RE) #.str.replace(",", "", regex=False)#DataFrame
-    return pd.to_numeric(out, errors="coerce")
 
 
 def ensure_dir(p: Path) -> None:
@@ -31,31 +21,25 @@ def ensure_dir(p: Path) -> None:
 
 
 def list_subfolders(
-    root: Path, exclude=exclude_files, specify_folders: Union[list[str], None] = None
+    root: Path, exclude=exclude_files, specify_folders: Optional[list[str]] = None
 ) -> list[Path]:
     excl = set(exclude)
     if specify_folders:
         return [
             p
             for p in root.iterdir()
-            if p.is_dir()
-            and (p.name not in excl)
-            and (i in p.name for i in specify_folders)
+            if p.is_dir() and p.name not in excl and any(i in p.name for i in specify_folders)
         ]
-    else:
-        return [p for p in root.iterdir() if p.is_dir() and (p.name not in excl)]
+    return [p for p in root.iterdir() if p.is_dir() and p.name not in excl]
 
 
 def concat_list_dict(d: dict[str, list[pd.DataFrame]]) -> dict[str, pd.DataFrame]:
-    return {
-        k: (pd.concat(v, ignore_index=True) if v else pd.DataFrame())
-        for k, v in d.items()
-    }
+    return {k: pd.concat(v, ignore_index=True) if v else pd.DataFrame() for k, v in d.items()}
 
 
 # -------------------- 共用流程 --------------------
 def process_folder_tree(
-    base_path: Path, out_root: Path, pattern: str, filename: Optional[str] = None
+    base_path: Path, out_root: str, pattern: str, filename: Optional[str] = None
 ) -> None:
     """
     走訪 base_path 下各子資料夾，讀檔並各自輸出一份合併檔。
@@ -165,198 +149,6 @@ def sort_by_location(
     return Path(params["output_path"]) / sorted_out_name
 
 
-def analyze_grouped(
-    sorted_path: Path,
-    group_specs: list[tuple[str, list[str], str]],
-    cleaner: Union[callable, None],
-    path_output: Union[Path, None],
-) -> None:
-    """
-    從 Sorted_data.xlsx 讀出各工作表，依 group_specs 做 groupby-sum-sort，分別輸出。
-    Args:
-        sorted_path: Path to the sorted data Excel file
-        group_specs: List of tuples specifying grouping operations:
-                    [(group_column, columns_to_sum, output_filename), ...]
-        cleaner: Optional cleaning function to apply to data before grouping
-        path_output: Output directory path (defaults to sorted_path parent)
-
-    Process:
-        1. Reads all sheets from sorted Excel file
-        2. Applies cleaning function if provided
-        3. For each grouping specification:
-           - Groups data by specified column
-           - Sums the specified numeric columns
-           - Sorts by summed values in descending order
-           - Outputs to separate Excel file
-    """
-    base_params = {
-        "path_data": str(sorted_path.parent.parent),
-        "path_output": str(path_output or sorted_path.parent),
-        "read_all_sheets": True,
-        "folder_path": str(sorted_path.parent),
-        "output_path": str(sorted_path.parent),
-    }
-    reader = read_data.read_data(base_params)
-    keys, values = reader.read_one_excel(str(sorted_path))
-
-    for group_col, sum_cols, out_file in group_specs:
-        result = {}
-        for k, df in zip(keys, values):
-            if k == "其他":
-                pass
-            if cleaner:
-                df = cleaner(df.copy())
-            g = df.groupby([group_col], dropna=False)[sum_cols].sum().reset_index()
-            # 依 sum_cols 的逆序排序（和原本邏輯一致）
-            g = g.sort_values(by=sum_cols[::-1], ascending=[False] * len(sum_cols))
-            result[k] = g
-        params = {**base_params, "file_name": out_file}
-        output_as(result, params)
-
-
-def analyze_ff_survey_files(
-    base_path: Path,
-    group_specs: list,
-    out_root: Union[Path, None],
-    pattern: str = "default",
-    filename: Optional[str] = None,
-) -> None:
-    """ """
-    file_name = filename or "Grouped_data.xlsx"
-    combined = {}
-    root_data = Path(str(base_path) + str(out_root.parent))
-    print("root_data", root_data)
-    valid_column = [
-        "大隊長",
-        "副大隊長",
-        "組長",
-        "主任",
-        "中隊長",
-        "副中隊長",
-        "分隊長",
-        "組員",
-        "小隊長",
-        "隊員",
-        "科長",
-        "科員",
-        "",
-    ]
-    for folder in list_subfolders(root_data):
-
-        logging.info(f"Processing folder: {folder.name}")
-        process_file = f"/{folder.name}.xlsx"
-        params = {
-            "path_data": str(base_path),
-            "folder_path": str(folder),
-            "file_name": file_name,
-            "pattern": pattern,
-        }
-        reader = read_data.read_data(params)
-
-        iterator = reader.read_excel_files()
-
-        agg_k, agg_v = reader.read_one_excel(
-            str(base_path) + str(out_root) + process_file
-        )
-        # city_files = [i for i in iterator]+[(process_file, (agg_k, agg_v))]
-        cert_dict_division = []  # defaultdict(list)
-        for f, (k, v) in iterator:  # division, sheet_names, dfs
-            f = Path(f).name.replace(".xlsx", "")
-            if isinstance(k, (list, tuple)) and len(k) > 0:
-                df_list = []
-                for i, j in zip(k, v):
-                    if ("基本資料" in i) and ("救災能量" not in i):
-                        dd = {i: [j] for i, j in zip(j["人員編制"], j["編制數量"])}
-                        df_dict = pd.DataFrame(dd)
-                        df_dict.index = pd.MultiIndex.from_tuples([(f, "編制數量")])
-                        # (f, "編制數量")
-                        df_list.append(df_dict)
-                        # print(df_dict)
-                    elif "證書" in i:
-                        for spec_i in group_specs:
-                            first_col = j.columns[0]
-                            val_columns = [
-                                col
-                                for col in j.columns.to_list()
-                                if col in valid_column
-                            ]
-                            mask = j[first_col].str.contains(
-                                spec_i, case=False, na=False
-                            )
-
-                            df = pd.DataFrame(
-                                j.loc[mask].iloc[:, 2:][val_columns].sum()
-                            ).T
-                            df.index = pd.MultiIndex.from_tuples(
-                                [(f, spec_i)], names=["單位", "課程"]
-                            )
-                            df_list.append(df)
-                    else:  ## TODO: Need modified if specs require equipment data.
-                        continue
-                cert_dict_division.append(pd.concat(df_list))
-            else:
-                logging.info(f"No data in {f}; skip.")
-        dfs = pd.concat(cert_dict_division).reset_index().fillna(0)
-        dfs = (
-            dfs.groupby(dfs.columns[:2].to_list(), dropna=False, sort=False).sum()
-            # .reset_index()
-        )
-        # print(dfs.index)
-        columns = [i for i in dfs.columns.to_list() if i in valid_column]
-        dfs_sum = dfs.groupby(level="level_1", dropna=False, sort=False)[columns].sum()
-        dfs_sum.index = pd.MultiIndex.from_tuples(
-            [("彙整", i) for i in (["編制數量"] + group_specs)], names=["單位", "課程"]
-        )
-        dfs_sum.loc[("彙整", "未受訓"), :] = (
-            dfs_sum.loc[("彙整", "編制數量"), :]
-            - dfs_sum.loc[("彙整", "化災搶救基礎班"), :]
-            - dfs_sum.loc[("彙整", "化災搶救進階班"), :]
-            - dfs_sum.loc[("彙整", "化災搶救教官班"), :]
-            - dfs_sum.loc[("彙整", "化災搶救指揮官班"), :]
-        )
-        df = pd.concat([dfs, dfs_sum])
-        # print(df)
-
-        df["總計"] = df.sum(axis=1)
-        df["比例"] = (
-            df["總計"].div(df.loc[("彙整", "編制數量"), "總計"]).round(3).map("{:.2%}".format) 
-        )
-        combined[folder.name] = df.reset_index()
-        # print(folder.name, combined[folder.name])
-    params = {
-        "path_data": str(base_path),
-        "file_name": file_name,
-        "pattern": pattern,
-        "output_path": str(base_path) + str(out_root),
-        "folder_path": str(root_data),
-    }
-    output_as(combined, params)
-    logging.info("All folders processed successfully.")
-
-
-# -------------------- 資料類型清理 --------------------
-
-
-def clean_chems(df: pd.DataFrame) -> pd.DataFrame:
-    for c in ("化學物質名稱", "容器材質", "物質儲存型態"):
-        if c in df:
-            df[c] = df[c].astype(str)
-    for c in ("廠內最大儲存量(公斤)", "廠內最大儲存量(公升)"):
-        if c in df:
-            df[c] = extract_first_number(df[c])
-    return df
-
-
-def clean_equipment(df: pd.DataFrame) -> pd.DataFrame:
-    for c in ("證照", "演練", "應變設備"):
-        if c in df:
-            df[c] = df[c].astype(str)
-    for c in ("證照數量", "演練數量", "應變設備數量", "應變設備可支援數量"):
-        if c in df:
-            df[c] = extract_first_number(df[c])
-    return df
-
-
 # -------------------- 主流程 --------------------
 def main():
     # Create an instance of the read_data class
@@ -404,22 +196,11 @@ def high_tech_industry_chems_main(base="../Data/科技廠救災能量", out_rel=
         "Sorted_data.xlsx", base_for_sorted, pattern="sort_by_location"
     )
     # 3) 分析輸出
+    storage_cols = ["廠內最大儲存量(公斤)", "廠內最大儲存量(公升)"]
     specs = [
-        (
-            "化學物質名稱",
-            ["廠內最大儲存量(公斤)", "廠內最大儲存量(公升)"],
-            "sort_by_hazmat.xlsx",
-        ),
-        (
-            "容器材質",
-            ["廠內最大儲存量(公斤)", "廠內最大儲存量(公升)"],
-            "sort_by_container.xlsx",
-        ),
-        (
-            "物質儲存型態",
-            ["廠內最大儲存量(公斤)", "廠內最大儲存量(公升)"],
-            "sort_by_state.xlsx",
-        ),
+        ("化學物質名稱", storage_cols, "sort_by_hazmat.xlsx"),
+        ("容器材質", storage_cols, "sort_by_container.xlsx"),
+        ("物質儲存型態", storage_cols, "sort_by_state.xlsx"),
     ]
     path_output = base_path / out_root
     analyze_grouped(sorted_path, specs, cleaner=clean_chems, path_output=path_output)
@@ -525,34 +306,13 @@ def firefighter_training_survey_main(
         pattern="default",
     )
     # 3) 依縣市彙整
-    specs = [
-        "化災搶救基礎班",
-        "化災搶救進階班",
-        "化災搶救指揮官班",
-        "化災搶救教官班",
-    ]
-
+    specs = ["化災搶救基礎班", "化災搶救進階班", "化災搶救指揮官班", "化災搶救教官班"]
     out_root = Path("/Output/Distribution_by_city")
     base_path = Path(root_reader.get_path())
-    # base_path = Path(str(base_path) + str(out_root.parent))
-    analyze_ff_survey_files(
-        base_path,
-        specs,
-        out_root=out_root,
-        pattern="default",
-        filename="Grouped_data.xlsx",
-    )
+    analyze_ff_survey_files(base_path, specs, out_root=out_root, pattern="default", filename="Grouped_data.xlsx")
 
 
 if __name__ == "__main__":
-
-    # main()
-    base = "../Data/消防機關救災能量"  # "../Data/科技廠救災能量"  #"../Test"  #
+    base = "../Data/消防機關救災能量"
     root_out = "/../Output"
-    # base = "../Test"  # "../Data/消防機關救災能量"  # "../Data/科技廠救災能量"  #
-    # root_out = "/../Output"  #
-    # high_tech_industry_chems_main(base, out_rel=root_out)
-    # high_tech_industry_rescue_equipment_main(
-    #     base, out_rel=root_out + "/Rescue_equipment"
-    # )
     firefighter_training_survey_main(base, root_out)

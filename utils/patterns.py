@@ -2,7 +2,9 @@ import pandas as pd
 import os
 import numpy as np
 from collections import defaultdict
-
+from pathlib import Path
+from typing import Union
+from typing import Optional
 
 def process_basic_data_sheet(sheet_name, dataframe, dfs_dict, required_key):
     """
@@ -400,33 +402,6 @@ def other_pattern(self, keys, values, pattern):
         df_values = []
         for i, j in zip(keys, values):
             if (required_keys[0] in i) & (len(i) < 31):
-                # if "救災能量" in i:
-                #     continue
-                # df_keys.append(required_keys[0])
-                # # sheet_name = j.iloc[1, 1]
-                # # df_keys.append(sheet_name)
-                # j = drop_cells_with_string(
-                #     j,
-                #     ["麥寮", "郭ＸＸ", "（05）693－3143", "範例", "-", "範例：１"],
-                #     except_str=[
-                #         "E-mail",
-                #     ],
-                # )
-                # index_staffs = j.index[
-                #     j.iloc[:, 0].astype(str).str.contains("救災能量")
-                # ].astype(int)[0]
-                # # print("#################", index_staffs, j.values[index_staffs, 0])
-                # dfs["基本資料"].extend(j.values[0])
-
-                # dfs["基本資料內容"].extend(
-                #     j[1:index_staffs].dropna(axis=0, how="all").values.T.tolist()
-                # )
-                # # print(dfs['基本資料內容'])
-                # dfs["人員編制"].extend(j.values[index_staffs + 2 :, 0])
-                # dfs["編制數量"].extend(j.values[index_staffs + 2 :, 2].astype(float))
-                # df = pd.DataFrame.from_dict(dfs, orient="index")
-                # df = df.transpose()
-                # df_values.append(df)
                 dfs, df = process_basic_data_sheet(i, j, dfs, required_keys[0])
                 if df is not None:
                     df_keys.append(required_keys[0])
@@ -468,6 +443,3 @@ def other_pattern(self, keys, values, pattern):
                 continue
         return df_keys, df_values
 
-
-# elif pattern == "analysis": #read with pattern analysis
-# ['大隊長','副大隊長','組長'	,'主任','中隊長','副中隊長','分隊長','組員','小隊長','隊員',]
