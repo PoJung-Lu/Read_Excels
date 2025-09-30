@@ -108,7 +108,6 @@ def process_folder_tree(
             else:
                 logging.info(f"No data in {f}; skip.")
         combined = {k: pd.concat(v, ignore_index=True) for k, v in combined.items()}
-
         if len(combined.keys()) >= 1:
             combined = merge_sheets_by_group(combined)
         params["output_path"] = str(base / out_root)
@@ -213,6 +212,126 @@ def analyze_grouped(
             result[k] = g
         params = {**base_params, "file_name": out_file}
         output_as(result, params)
+
+
+def analyze_ff_survey_files(
+    base_path: Path,
+    group_specs: list,
+    out_root: Union[Path, None],
+    pattern: str = "default",
+    filename: Optional[str] = None,
+) -> None:
+    """ """
+    file_name = filename or "Grouped_data.xlsx"
+    combined = {}
+    root_data = Path(str(base_path) + str(out_root.parent))
+    print("root_data", root_data)
+    valid_column = [
+        "大隊長",
+        "副大隊長",
+        "組長",
+        "主任",
+        "中隊長",
+        "副中隊長",
+        "分隊長",
+        "組員",
+        "小隊長",
+        "隊員",
+        "科長",
+        "科員",
+        "",
+    ]
+    for folder in list_subfolders(root_data):
+
+        logging.info(f"Processing folder: {folder.name}")
+        process_file = f"/{folder.name}.xlsx"
+        params = {
+            "path_data": str(base_path),
+            "folder_path": str(folder),
+            "file_name": file_name,
+            "pattern": pattern,
+        }
+        reader = read_data.read_data(params)
+
+        iterator = reader.read_excel_files()
+
+        agg_k, agg_v = reader.read_one_excel(
+            str(base_path) + str(out_root) + process_file
+        )
+        # city_files = [i for i in iterator]+[(process_file, (agg_k, agg_v))]
+        cert_dict_division = []  # defaultdict(list)
+        for f, (k, v) in iterator:  # division, sheet_names, dfs
+            f = Path(f).name.replace(".xlsx", "")
+            if isinstance(k, (list, tuple)) and len(k) > 0:
+                df_list = []
+                for i, j in zip(k, v):
+                    if ("基本資料" in i) and ("救災能量" not in i):
+                        dd = {i: [j] for i, j in zip(j["人員編制"], j["編制數量"])}
+                        df_dict = pd.DataFrame(dd)
+                        df_dict.index = pd.MultiIndex.from_tuples([(f, "編制數量")])
+                        # (f, "編制數量")
+                        df_list.append(df_dict)
+                        # print(df_dict)
+                    elif "證書" in i:
+                        for spec_i in group_specs:
+                            first_col = j.columns[0]
+                            val_columns = [
+                                col
+                                for col in j.columns.to_list()
+                                if col in valid_column
+                            ]
+                            mask = j[first_col].str.contains(
+                                spec_i, case=False, na=False
+                            )
+
+                            df = pd.DataFrame(
+                                j.loc[mask].iloc[:, 2:][val_columns].sum()
+                            ).T
+                            df.index = pd.MultiIndex.from_tuples(
+                                [(f, spec_i)], names=["單位", "課程"]
+                            )
+                            df_list.append(df)
+                    else:  ## TODO: Need modified if specs require equipment data.
+                        continue
+                cert_dict_division.append(pd.concat(df_list))
+            else:
+                logging.info(f"No data in {f}; skip.")
+        dfs = pd.concat(cert_dict_division).reset_index().fillna(0)
+        dfs = (
+            dfs.groupby(dfs.columns[:2].to_list(), dropna=False, sort=False).sum()
+            # .reset_index()
+        )
+        # print(dfs.index)
+        columns = [i for i in dfs.columns.to_list() if i in valid_column]
+        dfs_sum = dfs.groupby(level="level_1", dropna=False, sort=False)[columns].sum()
+        dfs_sum.index = pd.MultiIndex.from_tuples(
+            [("彙整", i) for i in (["編制數量"] + group_specs)], names=["單位", "課程"]
+        )
+        dfs_sum.loc[("彙整", "未受訓"), :] = (
+            dfs_sum.loc[("彙整", "編制數量"), :]
+            - dfs_sum.loc[("彙整", "化災搶救基礎班"), :]
+            - dfs_sum.loc[("彙整", "化災搶救進階班"), :]
+            - dfs_sum.loc[("彙整", "化災搶救教官班"), :]
+            - dfs_sum.loc[("彙整", "化災搶救指揮官班"), :]
+        )
+        df = pd.concat([dfs, dfs_sum])
+        # print(df)
+
+        df["總計"] = df.sum(axis=1)
+        df["比例"] = (
+            df["總計"].div(df.loc[("彙整", "編制數量"), "總計"]).round(3).map("{:.2%}".format) 
+        )
+        combined[folder.name] = df.reset_index()
+        # print(folder.name, combined[folder.name])
+    params = {
+        "path_data": str(base_path),
+        "file_name": file_name,
+        "pattern": pattern,
+        "output_path": str(base_path) + str(out_root),
+        "folder_path": str(root_data),
+    }
+    output_as(combined, params)
+    logging.info("All folders processed successfully.")
 
 
 # -------------------- 資料類型清理 --------------------
@@ -353,111 +472,6 @@ def high_tech_industry_rescue_equipment_main(
     )
 
 
-def analyze_ff_survey_files(
-    base_path: Path,
-    group_specs: list,
-    out_root: Union[Path, None],
-    pattern: str = "default",
-    filename: Optional[str] = None,
-) -> None:
-    """ """
-    file_name = filename or "Grouped_data.xlsx"
-    combined = {}
-    root_data = Path(str(base_path) + str(out_root.parent))
-    print("root_data", root_data)
-    valid_column = [
-        "大隊長",
-        "副大隊長",
-        "組長",
-        "主任",
-        "中隊長",
-        "副中隊長",
-        "分隊長",
-        "組員",
-        "小隊長",
-        "隊員",
-        "科員",
-    ]
-    for folder in list_subfolders(root_data):
-
-        logging.info(f"Processing folder: {folder.name}")
-        process_file = f"/{folder.name}.xlsx"
-        params = {
-            "path_data": str(base_path),
-            "folder_path": str(folder),
-            "file_name": file_name,
-            "pattern": pattern,
-        }
-        reader = read_data.read_data(params)
-
-        iterator = reader.read_excel_files()
-
-        agg_k, agg_v = reader.read_one_excel(
-            str(base_path) + str(out_root) + process_file
-        )
-        # city_files = [i for i in iterator]+[(process_file, (agg_k, agg_v))]
-        cert_dict_division = []  # defaultdict(list)
-        for f, (k, v) in iterator:  # division, sheet_names, dfs
-            f = Path(f).name.replace(".xlsx", "")
-            if isinstance(k, (list, tuple)) and len(k) > 0:
-                df_list = []
-                for i, j in zip(k, v):
-                    if ("基本資料" in i) and ("救災能量" not in i):
-                        dd = {i: [j] for i, j in zip(j["人員編制"], j["編制數量"])}
-                        df_dict = pd.DataFrame(dd)
-                        df_dict.index = pd.MultiIndex.from_tuples([(f, "編制數量")])
-                        # (f, "編制數量")
-                        df_list.append(df_dict)
-                        # print(df_dict)
-                    elif "證書" in i:
-                        for spec_i in group_specs:
-                            first_col = j.columns[0]
-                            mask = j[first_col].str.contains(
-                                spec_i, case=False, na=False
-                            )
-                            df = pd.DataFrame(j.loc[mask].iloc[:, 2:].sum()).T
-                            df.index = pd.MultiIndex.from_tuples([(f, spec_i)])
-                            df_list.append(df)
-                    else:
-                        continue
-
-                cert_dict_division.append(pd.concat(df_list))
-            else:
-                logging.info(f"No data in {f}; skip.")
-        dfs = pd.concat(cert_dict_division).reset_index().fillna(0)
-        print()
-        print(dfs.columns[:2])
-        print(dfs)
-
-        dfs = (
-            dfs.groupby(dfs.columns[:2].to_list(), dropna=False, sort=False)
-            .sum()
-            .reset_index()
-        )
-        columns = [i for i in dfs.columns.to_list() if i in valid_column]
-        dfs_sum = dfs.groupby(dfs.columns[1], dropna=False, sort=False)[columns].sum()
-        dfs_sum.index = pd.MultiIndex.from_tuples(
-            [("彙整", i) for i in (["編制數量"] + group_specs)]
-        )
-        dfs_sum.loc[("彙整", "未受訓"), :] = (
-            dfs_sum.loc[("彙整", "編制數量"), :]
-            - dfs_sum.loc[("彙整", "化災搶救基礎班"), :]
-        )
-        df = pd.concat([dfs, dfs_sum.reset_index()])
-        df["總計"] = df.iloc[:, 2:].sum(axis=1)
-        combined[folder.name] = df
-        print(folder.name, combined[folder.name])
-    params = {
-        "path_data": str(base_path),
-        "file_name": file_name,
-        "pattern": pattern,
-        "output_path": str(base_path) + str(out_root),
-        "folder_path": str(root_data),
-    }
-    output_as(combined, params)
-    logging.info("All folders processed successfully.")
-
-
 def firefighter_training_survey_main(
     base="../Data/消防機關救災能量", out_rel="../Output"
 ):
@@ -488,7 +502,6 @@ def firefighter_training_survey_main(
     base_path = Path(root_reader.get_path())
     # 1) 逐大隊資料夾處理
     for cities in list_subfolders(base_path, exclude=exclude_files + ("Raw_data",)):
-
         if "苗栗縣" in str(cities):
             pattern = "苗栗縣"
         else:
@@ -517,11 +530,6 @@ def firefighter_training_survey_main(
         "化災搶救進階班",
         "化災搶救指揮官班",
         "化災搶救教官班",
-        # "通識級",
-        # "操作級",
-        # "技術級",
-        # "指揮級",
-        # "專家級",
     ]
 
     out_root = Path("/Output/Distribution_by_city")
@@ -539,10 +547,10 @@ def firefighter_training_survey_main(
 if __name__ == "__main__":
 
     # main()
-    # base = "../Data/消防機關救災能量"  # "../Data/科技廠救災能量"  #"../Test"  #
-    # root_out = "/../Output"
-    base = "../Test"  # "../Data/消防機關救災能量"  # "../Data/科技廠救災能量"  #
-    root_out = "/../Output"  #
+    base = "../Data/消防機關救災能量"  # "../Data/科技廠救災能量"  #"../Test"  #
+    root_out = "/../Output"
+    # base = "../Test"  # "../Data/消防機關救災能量"  # "../Data/科技廠救災能量"  #
+    # root_out = "/../Output"  #
     # high_tech_industry_chems_main(base, out_rel=root_out)
     # high_tech_industry_rescue_equipment_main(
     #     base, out_rel=root_out + "/Rescue_equipment"
