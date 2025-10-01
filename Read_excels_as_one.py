@@ -1,51 +1,62 @@
-import os
 import pandas as pd
+from utils.patterns import merge_sheets_by_group
 import utils.read_data as read_data
 from utils.output_excel import output_as
+from utils.data_cleaners import clean_chems, clean_equipment
+from utils.industry_analysis import analyze_grouped
+from utils.firefighter_analysis import analyze_ff_survey_files
 from collections import defaultdict
 from pathlib import Path
 import logging
-from typing import Union
+from typing import Optional
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 # -------------------- 通用工具 --------------------
-
-# NUM_RE = r"[-+]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?(?:[eE][-+]?\d+)?"
-NUM_RE = r"(\d+\.?\d*)"
-exclude_files = ("Output",)
-
-
-def extract_first_number(s: pd.Series) -> pd.Series:
-    out = (
-        s.astype(str).str.extract(NUM_RE)[0].str.replace(",", "", regex=False)
-    )  # DataFrame series
-    # out = s.astype(str).str.extract(NUM_RE) #.str.replace(",", "", regex=False)#DataFrame
-    return pd.to_numeric(out, errors="coerce")
+exclude_files = ("Output", "Distribution_by_city")
 
 
 def ensure_dir(p: Path) -> None:
     p.mkdir(parents=True, exist_ok=True)
 
 
-def list_subfolders(root: Path, exclude=exclude_files) -> list[Path]:
+def list_subfolders(
+    root: Path, exclude=exclude_files, specify_folders: Optional[list[str]] = None
+) -> list[Path]:
     excl = set(exclude)
+    if specify_folders:
+        return [
+            p
+            for p in root.iterdir()
+            if p.is_dir() and p.name not in excl and any(i in p.name for i in specify_folders)
+        ]
     return [p for p in root.iterdir() if p.is_dir() and p.name not in excl]
 
 
 def concat_list_dict(d: dict[str, list[pd.DataFrame]]) -> dict[str, pd.DataFrame]:
-    return {
-        k: (pd.concat(v, ignore_index=True) if v else pd.DataFrame())
-        for k, v in d.items()
-    }
+    return {k: pd.concat(v, ignore_index=True) if v else pd.DataFrame() for k, v in d.items()}
 
 
 # -------------------- 共用流程 --------------------
-def process_folder_tree(base_path: Path, out_root: Path, pattern: str) -> None:
+def process_folder_tree(
+    base_path: Path, out_root: str, pattern: str, filename: Optional[str] = None
+) -> None:
     """
     走訪 base_path 下各子資料夾，讀檔並各自輸出一份合併檔。
     依 read_data API：reader.read_excel_files() / read_with_pattern()
     回傳    (file, (keys, df))
+
+    Args:
+        base_path: Root directory containing subdirectories with Excel files
+        out_root: Output directory path for processed files
+        pattern: Processing pattern to apply (e.g., 'top_ten_operating_chemicals')
+        filename: Optional prefix for output filenames
+
+    Process:
+        1. Iterates through each subdirectory in base_path
+        2. Reads Excel files using specified pattern
+        3. Combines data from multiple sheets/files
+        4. Outputs consolidated Excel file for each subdirectory
     """
     # ensure_dir(out_root)
     root_reader = read_data.read_data(
@@ -55,11 +66,16 @@ def process_folder_tree(base_path: Path, out_root: Path, pattern: str) -> None:
 
     for folder in list_subfolders(base):
         logging.info(f"Processing folder: {folder.name}")
+        file_name = (
+            f"{folder.name}.xlsx"
+            if not filename
+            else filename + "_" + f"{folder.name}.xlsx"
+        )
         params = {
             "path_data": str(base_path),
             "path_output": str(out_root),
             "folder_path": str(folder),
-            "file_name": f"{folder.name}.xlsx",
+            "file_name": file_name,
             "pattern": pattern,
         }
         reader = read_data.read_data(params)
@@ -67,18 +83,19 @@ def process_folder_tree(base_path: Path, out_root: Path, pattern: str) -> None:
         iterator = reader.read_excel_files()
 
         for f, (k, v) in iterator:
-            if isinstance(k, (list, tuple)) and len(k) > 0:
-                combined[k[0]].append(v)
+            if isinstance(k, (list, tuple)) and len(k) > 1:
+                [combined[i].append(j.dropna(axis=0, how="all")) for i, j in zip(k, v)]
+            elif isinstance(k, (list, tuple)) and len(k) == 1:
+                combined[k[0]].append(v[0])
             elif isinstance(k, str) and k:
                 combined[k].append(v)
             else:
                 logging.info(f"No data in {f}; skip.")
-
         combined = {k: pd.concat(v, ignore_index=True) for k, v in combined.items()}
-
+        if len(combined.keys()) >= 1:
+            combined = merge_sheets_by_group(combined)
         params["output_path"] = str(base / out_root)
         output_as(combined, params)
-
     logging.info("All folders processed successfully.")
 
 
@@ -86,7 +103,21 @@ def sort_by_location(
     sorted_out_name: str, base_for_sorted: Path, pattern="sort_by_location"
 ) -> Path:
     """
-    讀取前一步各資料夾的輸出檔，依園區（北/中/南/其他）彙整成多工作表。
+    讀取process_folder_tree的輸出檔，依園區（北/中/南/其他）彙整成多工作表。
+
+    Args:
+        sorted_out_name: Name for the consolidated output file
+        base_for_sorted: Directory containing files to be sorted by location
+        pattern: Processing pattern (default: 'sort_by_location')
+
+    Returns:
+        Path to the created sorted output file
+
+    Process:
+        1. Reads previously processed files from subdirectories
+        2. Categorizes data by Taiwan regions (北部園區/中部園區/南部園區/其他)
+        3. Combines data for each region into separate sheets
+        4. Outputs multi-sheet Excel file organized by region
     """
     root_reader = read_data.read_data(
         {
@@ -118,64 +149,6 @@ def sort_by_location(
     return Path(params["output_path"]) / sorted_out_name
 
 
-def analyze_grouped(
-    sorted_path: Path,
-    group_specs: list[tuple[str, list[str], str]],
-    cleaner: Union[callable, None],
-    path_output: Union[Path, None],
-) -> None:
-    """
-    從 Sorted_data.xlsx 讀出各工作表，依 group_specs 做 groupby-sum-sort，分別輸出。
-    group_specs: [(group_col, sum_cols, out_filename), ...]
-    """
-    base_params = {
-        "path_data": str(sorted_path.parent.parent),
-        "path_output": str(path_output or sorted_path.parent),
-        "read_all_sheets": True,
-        "folder_path": str(sorted_path.parent),
-        "output_path": str(sorted_path.parent),
-    }
-    reader = read_data.read_data(base_params)
-    keys, values = reader.read_one_excel(str(sorted_path))
-
-    for group_col, sum_cols, out_file in group_specs:
-        result = {}
-        for k, df in zip(keys, values):
-            if k == "其他":
-                continue
-            if cleaner:
-                df = cleaner(df.copy())
-            g = df.groupby([group_col], dropna=False)[sum_cols].sum().reset_index()
-            # 依 sum_cols 的逆序排序（和你原本邏輯一致）
-            g = g.sort_values(by=sum_cols[::-1], ascending=[False] * len(sum_cols))
-            result[k] = g
-        params = {**base_params, "file_name": out_file}
-        output_as(result, params)
-
-
-# -------------------- 資料類型清理 --------------------
-
-
-def clean_chems(df: pd.DataFrame) -> pd.DataFrame:
-    for c in ("化學物質名稱", "容器材質", "物質儲存型態"):
-        if c in df:
-            df[c] = df[c].astype(str)
-    for c in ("廠內最大儲存量(公斤)", "廠內最大儲存量(公升)"):
-        if c in df:
-            df[c] = extract_first_number(df[c])
-    return df
-
-
-def clean_equipment(df: pd.DataFrame) -> pd.DataFrame:
-    for c in ("證照", "演練", "應變設備"):
-        if c in df:
-            df[c] = df[c].astype(str)
-    for c in ("證照數量", "演練數量", "應變設備數量", "應變設備可支援數量"):
-        if c in df:
-            df[c] = extract_first_number(df[c])
-    return df
-
-
 # -------------------- 主流程 --------------------
 def main():
     # Create an instance of the read_data class
@@ -193,7 +166,24 @@ def main():
 
 
 def high_tech_industry_chems_main(base="../Data/科技廠救災能量", out_rel="/Output"):
-    """Function to handle high-tech industry data processing."""
+    """
+    Function to handle high-tech industry chemical storage data processing.
+
+    Args:
+        base: Base directory containing industrial chemical data
+        out_rel: Relative output directory path
+
+    Workflow:
+        1. Process each company folder using 'top_ten_operating_chemicals' pattern
+        2. Sort and aggregate data by Taiwan industrial park regions
+        3. Generate analysis reports grouped by:
+           - Chemical names with storage quantities
+           - Container materials with storage volumes
+           - Storage states (solid/liquid/gas) with quantities
+
+    Output:
+        Creates multiple Excel files with aggregated chemical inventory data
+    """
     base_path = Path(base)
     out_root = out_rel.strip("/")
     # 1) 逐資料夾處理
@@ -206,22 +196,11 @@ def high_tech_industry_chems_main(base="../Data/科技廠救災能量", out_rel=
         "Sorted_data.xlsx", base_for_sorted, pattern="sort_by_location"
     )
     # 3) 分析輸出
+    storage_cols = ["廠內最大儲存量(公斤)", "廠內最大儲存量(公升)"]
     specs = [
-        (
-            "化學物質名稱",
-            ["廠內最大儲存量(公斤)", "廠內最大儲存量(公升)"],
-            "sort_by_hazmat.xlsx",
-        ),
-        (
-            "容器材質",
-            ["廠內最大儲存量(公斤)", "廠內最大儲存量(公升)"],
-            "sort_by_container.xlsx",
-        ),
-        (
-            "物質儲存型態",
-            ["廠內最大儲存量(公斤)", "廠內最大儲存量(公升)"],
-            "sort_by_state.xlsx",
-        ),
+        ("化學物質名稱", storage_cols, "sort_by_hazmat.xlsx"),
+        ("容器材質", storage_cols, "sort_by_container.xlsx"),
+        ("物質儲存型態", storage_cols, "sort_by_state.xlsx"),
     ]
     path_output = base_path / out_root
     analyze_grouped(sorted_path, specs, cleaner=clean_chems, path_output=path_output)
@@ -232,6 +211,21 @@ def high_tech_industry_rescue_equipment_main(
 ):
     """
     Function to handle high-tech industry rescue equipment data processing.
+
+    Args:
+        base: Base directory containing industrial rescue equipment data
+        out_rel: Relative output directory path for equipment reports
+
+    Workflow:
+        1. Process each facility folder using 'industry_rescue_equipment' pattern
+        2. Sort and aggregate data by Taiwan industrial park regions
+        3. Generate analysis reports grouped by:
+           - Certifications and license counts
+           - Training exercises and participation numbers
+           - Emergency response equipment and support capacities
+
+    Output:
+        Creates categorized Excel files for equipment inventory analysis
     """
     base_path = Path(base)
     out_root = out_rel.strip("/")
@@ -259,8 +253,66 @@ def high_tech_industry_rescue_equipment_main(
     )
 
 
+def firefighter_training_survey_main(
+    base="../Data/消防機關救災能量", out_rel="../Output"
+):
+    """
+    Function to handle firefighters' rescue capability data processing.
+
+    Args:
+        base: Base directory containing firefighter survey data
+        out_rel: Relative output directory path
+
+    Expected folder structure:
+        base_path/cities/Division/files.xlsx
+
+    Workflow:
+        1. Process firefighter data by city and division
+        2. Aggregate training levels (基礎班/進階班/指揮官班/教官班)
+        3. Compile personnel counts and equipment inventories
+        4. Generate city-level distribution reports
+
+    Output:
+        Creates consolidated reports showing firefighter capabilities by region
+    """
+    base = Path(base)
+    out_root = out_rel.strip("/")
+    root_reader = read_data.read_data(
+        {"path_data": str(base), "path_output": str(out_root), "pattern": ""}
+    )
+    base_path = Path(root_reader.get_path())
+    # 1) 逐大隊資料夾處理
+    for cities in list_subfolders(base_path, exclude=exclude_files + ("Raw_data",)):
+        if "苗栗縣" in str(cities):
+            pattern = "苗栗縣"
+        else:
+            pattern = "firefighter_rescue_survey"
+        logging.info(f"Processing city folder: {cities.name}")
+        city_path = base / cities.name
+        city_out_root = out_root + f"/{cities.name}"
+        process_folder_tree(
+            base_path=city_path,
+            out_root=city_out_root,
+            pattern=pattern,
+            filename=cities.name,
+        )
+    # 2) 逐縣市資料夾處理
+    out_root = "Distribution_by_city"
+    path_output = out_root
+    base_path = base / Path("Output")
+    process_folder_tree(
+        base_path=base_path,
+        out_root=out_root,
+        pattern="default",
+    )
+    # 3) 依縣市彙整
+    specs = ["化災搶救基礎班", "化災搶救進階班", "化災搶救指揮官班", "化災搶救教官班"]
+    out_root = Path("/Output/Distribution_by_city")
+    base_path = Path(root_reader.get_path())
+    analyze_ff_survey_files(base_path, specs, out_root=out_root, pattern="default", filename="Grouped_data.xlsx")
+
+
 if __name__ == "__main__":
-    # main()
-    base = "../Data/科技廠救災能量"
-    high_tech_industry_chems_main(base, out_rel="/Output")
-    high_tech_industry_rescue_equipment_main(base, out_rel="/Output/Rescue_equipment")
+    base = "../Data/消防機關救災能量"
+    root_out = "/../Output"
+    firefighter_training_survey_main(base, root_out)
