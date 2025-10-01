@@ -8,7 +8,7 @@ from pathlib import Path
 
 class read_data:
     """
-    This class allows you to specify a directory containing Excel files and read them into a pandas DataFrame.
+    This class specify a directory containing Excel files and read them into a pandas DataFrame.
     """
 
     from .patterns import other_pattern

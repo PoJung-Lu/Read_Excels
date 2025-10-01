@@ -7,8 +7,10 @@ import pandas as pd
 import utils.read_data as read_data
 from utils.output_excel import output_as
 
+exclude_files = ("Output", "Distribution_by_city")
 
-def list_subfolders(root: Path, exclude: tuple = ()) -> list[Path]:
+
+def list_subfolders(root: Path, exclude: tuple = exclude_files) -> list[Path]:
     """Lists subdirectories excluding specified folder names."""
     excl = set(exclude)
     return [p for p in root.iterdir() if p.is_dir() and p.name not in excl]
@@ -63,9 +65,7 @@ def analyze_ff_survey_files(
             "pattern": pattern,
         }
         reader = read_data.read_data(params)
-
         iterator = reader.read_excel_files()
-        agg_k, agg_v = reader.read_one_excel(str(base_path) + str(out_root) + process_file)
         cert_dict_division = []
         for f, (k, v) in iterator:
             f = Path(f).name.replace(".xlsx", "")
@@ -80,12 +80,23 @@ def analyze_ff_survey_files(
                     elif "證書" in i:
                         for spec_i in group_specs:
                             first_col = j.columns[0]
-                            val_columns = [col for col in j.columns if col in valid_column]
-                            mask = j[first_col].str.contains(spec_i, case=False, na=False)
-                            df = pd.DataFrame(j.loc[mask].iloc[:, 2:][val_columns].sum()).T
-                            df.index = pd.MultiIndex.from_tuples([(f, spec_i)], names=["單位", "課程"])
+                            val_columns = [
+                                col for col in j.columns if col in valid_column
+                            ]
+                            mask = j[first_col].str.contains(
+                                spec_i, case=False, na=False
+                            )
+                            df = pd.DataFrame(
+                                j.loc[mask].iloc[:, 2:][val_columns].sum()
+                            ).T
+                            df.index = pd.MultiIndex.from_tuples(
+                                [(f, spec_i)], names=["單位", "課程"]
+                            )
                             df_list.append(df)
-                cert_dict_division.append(pd.concat(df_list))
+                if df_list:
+                    cert_dict_division.append(pd.concat(df_list))
+                else:
+                    logging.warning(f"No matching data found in {f}; skipping.")
             else:
                 logging.info(f"No data in {f}; skip.")
         dfs = pd.concat(cert_dict_division).reset_index().fillna(0)
@@ -95,13 +106,23 @@ def analyze_ff_survey_files(
         dfs_sum.index = pd.MultiIndex.from_tuples(
             [("彙整", i) for i in (["編制數量"] + group_specs)], names=["單位", "課程"]
         )
-        training_classes = ["化災搶救基礎班", "化災搶救進階班", "化災搶救教官班", "化災搶救指揮官班"]
+        training_classes = [
+            "化災搶救基礎班",
+            "化災搶救進階班",
+            "化災搶救教官班",
+            "化災搶救指揮官班",
+        ]
         dfs_sum.loc[("彙整", "未受訓"), :] = dfs_sum.loc[("彙整", "編制數量"), :] - sum(
             dfs_sum.loc[("彙整", cls), :] for cls in training_classes
         )
         df = pd.concat([dfs, dfs_sum])
         df["總計"] = df.sum(axis=1)
-        df["比例"] = df["總計"].div(df.loc[("彙整", "編制數量"), "總計"]).round(3).map("{:.2%}".format)
+        df["比例"] = (
+            df["總計"]
+            .div(df.loc[("彙整", "編制數量"), "總計"])
+            .round(3)
+            .map("{:.2%}".format)
+        )
         combined[folder.name] = df.reset_index()
     params = {
         "path_data": str(base_path),
