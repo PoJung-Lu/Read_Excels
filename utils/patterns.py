@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Union
 from typing import Optional
 
+
 def process_basic_data_sheet(sheet_name, dataframe, dfs_dict, required_key):
     """
     Process basic data sheet and return a DataFrame.
@@ -87,10 +88,16 @@ def merge_sheets_by_group(
             print("##################################", k)
             columns = v.columns.tolist()
             # v[columns[1]] = v[columns[1]].astype(str)
-            g = v.groupby(
-                [columns[0], columns[2]], as_index=False, dropna=False, sort=False
-            ).agg({columns[1]: list, columns[3]: "sum"})
-            df_dict[required_keys[0]] = g.reindex(columns=columns)
+            # Group by column 0 and column 2 separately
+            g1 = v.groupby(columns[0], as_index=False, dropna=False, sort=False).agg(
+                {columns[1]: list}
+            )
+            g2 = v.groupby(columns[2], as_index=False, dropna=False, sort=False).agg(
+                {columns[3]: "sum"}
+            )
+            # Combine results maintaining original column order
+            g = pd.concat([g1, g2], axis=1)
+            df_dict[required_keys[0]] = g
 
         elif k in required_keys[1:3]:
             print("##################################", k)
@@ -98,7 +105,6 @@ def merge_sheets_by_group(
             df_dict[k] = v.groupby(
                 group_keys, as_index=False, dropna=False, sort=False
             ).sum()
-
 
         elif k in required_keys[3:]:
             print("##################################", k)
@@ -108,7 +114,6 @@ def merge_sheets_by_group(
             ).sum()
         else:
             df_dict[k] = v
-        
     return df_dict
 
 
@@ -152,25 +157,32 @@ def other_pattern(self, keys, values, pattern):
             "其他救災設備",
         ]
         n_columns = ["項次", "設備名稱", "數量"]
-        df_values0 = process_basic_data_sheet(keys[0], values[0], defaultdict(list), [])[1]
-        title_name = ['國內專業訓練證書(證照類型)'] + values[1].iloc[0].values.tolist()[1:]
+        df_values0 = process_basic_data_sheet(
+            keys[0], values[0], defaultdict(list), []
+        )[1]
+        title_name = ["國內專業訓練證書(證照類型)"] + values[1].iloc[0].values.tolist()[
+            1:
+        ]
         df_values1 = pd.DataFrame(values[1][1:index_certification])
         df_values1.columns = title_name
         df_values1 = pd.DataFrame(df_values1.T.groupby(level=0, sort=False).sum().T)
-        df_values1.insert(1, '統計人數', np.nan )
-
+        df_values1.insert(1, "統計人數", np.nan)
 
         df_values2 = pd.DataFrame(values[1][index_certification:])
-        df_values2.columns = ['國外專業訓練證書(證照類型)']+title_name[1:]
+        df_values2.columns = ["國外專業訓練證書(證照類型)"] + title_name[1:]
         df_values2 = pd.DataFrame(df_values2.T.groupby(level=0, sort=False).sum()).T
-        df_values2.insert(1, '統計人數', np.nan )
+        df_values2.insert(1, "統計人數", np.nan)
         df_values3 = pd.DataFrame(
-            np.array(values[2])[:23, :4], columns=["項次", "車輛名稱", '', "數量"]
+            np.array(values[2])[:23, :4], columns=["項次", "車輛名稱", "", "數量"]
         )
         df_values4 = pd.DataFrame(np.array(values[2])[:10, 5:8], columns=n_columns)[1:]
-        df_values5 = pd.DataFrame(np.array(values[2])[12:22, 5:8], columns=n_columns)[1:]
+        df_values5 = pd.DataFrame(np.array(values[2])[12:22, 5:8], columns=n_columns)[
+            1:
+        ]
         df_values6 = pd.DataFrame(np.array(values[2])[:12, 9:12], columns=n_columns)[1:]
-        df_values7 = pd.DataFrame(np.array(values[2])[12:20, 9:12], columns=n_columns)[1:]
+        df_values7 = pd.DataFrame(np.array(values[2])[12:20, 9:12], columns=n_columns)[
+            1:
+        ]
         df_values8 = pd.DataFrame(
             np.array(values[2])[:27, 13:17], columns=["項次", "設備名稱", "", "數量"]
         )[1:]
@@ -442,4 +454,3 @@ def other_pattern(self, keys, values, pattern):
             else:
                 continue
         return df_keys, df_values
-
