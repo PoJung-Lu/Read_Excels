@@ -149,6 +149,8 @@ def other_pattern(self, keys, values, pattern):
             "基本資料",
             "國內證書",
             "國外證書",
+            "國內證照",
+            "國外證照",
             "消防車輛設備",
             "火災搶救設備",
             "個人防護設備",
@@ -410,9 +412,14 @@ def other_pattern(self, keys, values, pattern):
             "化災搶救設備",
             "偵檢警報設備",
         ]
+        typo_map = {
+            "國內證照": "國內證書",
+            "國外證照": "國外證書",
+        }
         df_keys = []
         df_values = []
         for i, j in zip(keys, values):
+            i = typo_map.get(i, i)
             if (required_keys[0] in i) & (len(i) < 31):
                 dfs, df = process_basic_data_sheet(i, j, dfs, required_keys[0])
                 if df is not None:
