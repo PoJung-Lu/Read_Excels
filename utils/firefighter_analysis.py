@@ -72,7 +72,7 @@ def analyze_ff_survey_files(
             if isinstance(k, (list, tuple)) and len(k) > 0:
                 df_list = []
                 for i, j in zip(k, v):
-                    if "基本資料" in i and "救災能量" not in i:
+                    if ("基本資料" in i) and ("救災能量" not in i):
                         valid_set = set(valid_column)
                         dd = {role: [count] for role, count in zip(j["人員編制"], j["編制數量"])}
                         dd = {k: dd.get(k, [0]) for k in valid_column} | {k: v for k, v in dd.items() if k not in valid_set}
