@@ -28,13 +28,18 @@ def list_subfolders(
         return [
             p
             for p in root.iterdir()
-            if p.is_dir() and p.name not in excl and any(i in p.name for i in specify_folders)
+            if p.is_dir()
+            and p.name not in excl
+            and any(i in p.name for i in specify_folders)
         ]
     return [p for p in root.iterdir() if p.is_dir() and p.name not in excl]
 
 
 def concat_list_dict(d: dict[str, list[pd.DataFrame]]) -> dict[str, pd.DataFrame]:
-    return {k: pd.concat(v, ignore_index=True) if v else pd.DataFrame() for k, v in d.items()}
+    return {
+        k: pd.concat(v, ignore_index=True) if v else pd.DataFrame()
+        for k, v in d.items()
+    }
 
 
 # -------------------- 共用流程 --------------------
@@ -309,10 +314,16 @@ def firefighter_training_survey_main(
     specs = ["化災搶救基礎班", "化災搶救進階班", "化災搶救指揮官班", "化災搶救教官班"]
     out_root = Path("/Output/Distribution_by_city")
     base_path = Path(root_reader.get_path())
-    analyze_ff_survey_files(base_path, specs, out_root=out_root, pattern="default", filename="Grouped_data.xlsx")
+    analyze_ff_survey_files(
+        base_path,
+        specs,
+        out_root=out_root,
+        pattern="default",
+        filename="Grouped_data.xlsx",
+    )
 
 
 if __name__ == "__main__":
-    base = "../Data/消防機關救災能量"
+    base = "../Data/消防機關救災能量" # "../Test"  # 
     root_out = "/../Output"
     firefighter_training_survey_main(base, root_out)
