@@ -18,6 +18,14 @@ A Python-based data processing system for analyzing industrial safety and emerge
 
 ### Dependencies
 
+Install required packages:
+
+```bash
+pip install -r requirements.txt
+```
+
+Or manually:
+
 ```bash
 pip install pandas openpyxl
 ```
@@ -107,6 +115,7 @@ Data/
 ## Output
 
 The system generates consolidated Excel files with:
+
 - Aggregated data organized by region/category
 - Summary statistics and groupby analyses
 - Multi-sheet workbooks for different data dimensions
@@ -144,8 +153,4 @@ Read_Excels/
 
 ## License
 
-[Add your license information here]
-
-## Contributing
-
-[Add contribution guidelines here]
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
