@@ -320,10 +320,10 @@ def other_pattern(self, keys, values, pattern):
                 index_title = [[1, 1, 2, 3, 4, 3, 4], [0, 4, 0, 0, 0, 4, 4]]
                 index_value = [[1, 1, 2, 3, 4, 3, 4, 5, 6], [1, 6, 1, 1, 1, 6, 6, 2, 2]]
 
-                dfs["基本資料"].extend(j.values[*index_title])
+                dfs["基本資料"].extend(j.values[index_title[0], index_title[1]])
                 dfs["基本資料"].append("經度")
                 dfs["基本資料"].append("緯度")
-                dfs["基本資料內容"].extend(j.values[*index_value])
+                dfs["基本資料內容"].extend(j.values[index_value[0], index_value[1]])
 
             elif ("證照及演練" in i) & (len(i) < 31):
                 index_training = j.index[
