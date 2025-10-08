@@ -1,3 +1,4 @@
+from __future__ import annotations
 import pandas as pd
 from utils.patterns import merge_sheets_by_group
 import utils.read_data as read_data

@@ -1,4 +1,5 @@
 """Analysis functions for high-tech industry data processing."""
+from __future__ import annotations
 
 from pathlib import Path
 from typing import Optional, Callable
