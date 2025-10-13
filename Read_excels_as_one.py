@@ -92,7 +92,12 @@ def process_folder_tree(
             if isinstance(k, (list, tuple)) and len(k) > 1:
                 [combined[i].append(j.dropna(axis=0, how="all")) for i, j in zip(k, v)]
             elif isinstance(k, (list, tuple)) and len(k) == 1:
-                combined[k[0]].append(v[0])
+                # v is a list when k is a list
+                if isinstance(v, (list, tuple)) and len(v) > 0:
+                    combined[k[0]].append(v[0].dropna(axis=0, how="all"))
+                else:
+                    # Fallback: treat v as a single DataFrame
+                    combined[k[0]].append(v.dropna(axis=0, how="all"))
             elif isinstance(k, str) and k:
                 combined[k].append(v)
             else:
