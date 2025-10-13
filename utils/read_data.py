@@ -46,16 +46,18 @@ class read_data:
 
             # This works when the code is executed as a script
             # path =  os.path.dirname(__file__)#os.getcwd() #
-            main_file = sys.modules["__main__"].__file__
-            if main_file is None:
-                # When running with python -c, use current working directory
-                path = os.getcwd()
-            else:
+            try:
+                main_file = sys.modules["__main__"].__file__
+                if main_file is None:
+                    raise AttributeError("__main__.__file__ is None")
                 path = os.path.abspath(main_file).replace(
                     "/Read_excels_as_one.py", ""
                 )
+            except AttributeError:
+                # When running with python -c, use current working directory
+                path = os.getcwd()
             print("Current working directory:", path)
-        except (NameError, AttributeError):
+        except NameError:
             # This works in Jupyter Notebooks
             from pathlib import Path
 
