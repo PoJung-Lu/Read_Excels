@@ -47,9 +47,15 @@ def analyze_grouped(
         result = {}
         for k, df in zip(keys, values):
             if k == "其他":
-                pass
+                continue
             if cleaner:
                 df = cleaner(df.copy())
+            # Check if required columns exist in the DataFrame
+            if group_col not in df.columns:
+                continue
+            missing_cols = [col for col in sum_cols if col not in df.columns]
+            if missing_cols:
+                continue
             g = df.groupby([group_col], dropna=False)[sum_cols].sum().reset_index()
             g = g.sort_values(by=sum_cols[::-1], ascending=[False] * len(sum_cols))
             result[k] = g
