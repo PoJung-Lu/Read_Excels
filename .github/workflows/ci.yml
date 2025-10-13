@@ -71,12 +71,6 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    - name: Create Output directories for test data
-      run: |
-        mkdir -p tests/test_data/sample_company/Output
-        mkdir -p tests/test_data/sample_firefighter_survey/Output
-        mkdir -p test_output
-
     - name: Test high-tech industry chemicals processing
       run: |
         python -c "
@@ -117,12 +111,13 @@ jobs:
         ls -lR tests/test_data/sample_firefighter_survey/*/test_output/ || true
         echo "✓ Tests completed successfully"
 
-    - name: Clean up Output directories
+    - name: Clean up test output directories
       if: always()
       run: |
         rm -rf tests/test_data/sample_company/Output
         rm -rf tests/test_data/sample_company/test_output
         rm -rf tests/test_data/sample_firefighter_survey/Output
+        rm -rf tests/test_data/sample_firefighter_survey/Distribution_by_city
         rm -rf tests/test_data/sample_firefighter_survey/*/test_output
         echo "✓ Cleaned up test output directories"
 
