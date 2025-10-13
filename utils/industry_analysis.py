@@ -59,5 +59,7 @@ def analyze_grouped(
             g = df.groupby([group_col], dropna=False)[sum_cols].sum().reset_index()
             g = g.sort_values(by=sum_cols[::-1], ascending=[False] * len(sum_cols))
             result[k] = g
-        params = {**base_params, "file_name": out_file}
-        output_as(result, params)
+        # Only write output if we have results
+        if result:
+            params = {**base_params, "file_name": out_file}
+            output_as(result, params)

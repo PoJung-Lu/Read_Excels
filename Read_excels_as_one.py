@@ -14,7 +14,7 @@ from typing import Optional
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 # -------------------- 通用工具 --------------------
-exclude_files = ("Output", "Distribution_by_city")
+exclude_files = ("Output", "Distribution_by_city", "test_output")
 
 
 def ensure_dir(p: Path) -> None:
@@ -311,22 +311,26 @@ def firefighter_training_survey_main(
     out_root = "Distribution_by_city"
     path_output = out_root
     base_path = base / Path("Output")
-    process_folder_tree(
-        base_path=base_path,
-        out_root=out_root,
-        pattern="default",
-    )
+    # Only process if Output directory exists
+    if base_path.exists():
+        process_folder_tree(
+            base_path=base_path,
+            out_root=out_root,
+            pattern="default",
+        )
     # 3) 依縣市彙整
     specs = ["化災搶救基礎班", "化災搶救進階班", "化災搶救指揮官班", "化災搶救教官班"]
     out_root = Path("/Output/Distribution_by_city")
     base_path = Path(root_reader.get_path())
-    analyze_ff_survey_files(
-        base_path,
-        specs,
-        out_root=out_root,
-        pattern="default",
-        filename="Grouped_data.xlsx",
-    )
+    # Only analyze if Output directory exists
+    if (base / "Output").exists():
+        analyze_ff_survey_files(
+            base_path,
+            specs,
+            out_root=out_root,
+            pattern="default",
+            filename="Grouped_data.xlsx",
+        )
 
 
 if __name__ == "__main__":
