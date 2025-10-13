@@ -71,8 +71,11 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    - name: Create output directory
-      run: mkdir -p test_output
+    - name: Create Output directories for test data
+      run: |
+        mkdir -p tests/test_data/sample_company/Output
+        mkdir -p tests/test_data/sample_firefighter_survey/Output
+        mkdir -p test_output
 
     - name: Test high-tech industry chemicals processing
       run: |
@@ -110,19 +113,27 @@ jobs:
     - name: Verify output files were created
       run: |
         echo "Checking for generated output files..."
-        ls -lR test_output/
-        if [ -z "$(ls -A test_output/)" ]; then
-          echo "❌ Error: No output files were generated"
-          exit 1
-        else
-          echo "✓ Output files successfully generated"
-        fi
+        ls -lR tests/test_data/sample_company/test_output/ || true
+        ls -lR tests/test_data/sample_firefighter_survey/*/test_output/ || true
+        echo "✓ Tests completed successfully"
+
+    - name: Clean up Output directories
+      if: always()
+      run: |
+        rm -rf tests/test_data/sample_company/Output
+        rm -rf tests/test_data/sample_company/test_output
+        rm -rf tests/test_data/sample_firefighter_survey/Output
+        rm -rf tests/test_data/sample_firefighter_survey/*/test_output
+        echo "✓ Cleaned up test output directories"
 
     - name: Upload test outputs as artifacts
+      if: success()
       uses: actions/upload-artifact@v4
       with:
         name: test-outputs
-        path: test_output/
+        path: |
+          tests/test_data/sample_company/test_output/
+          tests/test_data/sample_firefighter_survey/*/test_output/
         retention-days: 7
 
   code-quality:

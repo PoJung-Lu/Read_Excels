@@ -126,12 +126,14 @@ def analyze_ff_survey_files(
             .map("{:.2%}".format)
         )
         combined[folder.name] = df.reset_index()
-    params = {
-        "path_data": str(base_path),
-        "file_name": file_name,
-        "pattern": pattern,
-        "output_path": str(base_path) + str(out_root),
-        "folder_path": str(root_data),
-    }
-    output_as(combined, params)
+    # Only write output if we have data
+    if combined:
+        params = {
+            "path_data": str(base_path),
+            "file_name": file_name,
+            "pattern": pattern,
+            "output_path": str(base_path) + str(out_root),
+            "folder_path": str(root_data),
+        }
+        output_as(combined, params)
     logging.info("All folders processed successfully.")
