@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Optional, Callable
+import logging
 import pandas as pd
 import utils.read_data as read_data
 from utils.output_excel import output_as
@@ -45,6 +46,8 @@ def analyze_grouped(
 
     for group_col, sum_cols, out_file in group_specs:
         result = {}
+        skipped_sheets = []
+
         for k, df in zip(keys, values):
             if k == "其他":
                 continue
@@ -52,14 +55,25 @@ def analyze_grouped(
                 df = cleaner(df.copy())
             # Check if required columns exist in the DataFrame
             if group_col not in df.columns:
+                skipped_sheets.append(f"{k} (missing column: {group_col})")
                 continue
             missing_cols = [col for col in sum_cols if col not in df.columns]
             if missing_cols:
+                skipped_sheets.append(f"{k} (missing columns: {', '.join(missing_cols)})")
                 continue
             g = df.groupby([group_col], dropna=False)[sum_cols].sum().reset_index()
             g = g.sort_values(by=sum_cols[::-1], ascending=[False] * len(sum_cols))
             result[k] = g
+
+        # Report skipped sheets
+        if skipped_sheets:
+            logging.warning(f"⚠️  Skipped sheets for {out_file}:")
+            for sheet in skipped_sheets:
+                logging.warning(f"   - {sheet}")
+
         # Only write output if we have results
         if result:
             params = {**base_params, "file_name": out_file}
             output_as(result, params)
+        elif not result and not skipped_sheets:
+            logging.warning(f"⚠️  No data available for {out_file}")

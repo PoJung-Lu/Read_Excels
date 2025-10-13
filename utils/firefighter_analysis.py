@@ -38,6 +38,7 @@ def analyze_ff_survey_files(
     """
     file_name = filename or "Grouped_data.xlsx"
     combined = {}
+    skipped_folders = []
     root_data = Path(str(base_path) + str(out_root.parent))
     print("root_data", root_data)
     valid_column = [
@@ -101,6 +102,11 @@ def analyze_ff_survey_files(
                     logging.warning(f"No matching data found in {f}; skipping.")
             else:
                 logging.info(f"No data in {f}; skip.")
+
+        if not cert_dict_division:
+            skipped_folders.append(f"{folder.name} (no valid data found)")
+            continue
+
         dfs = pd.concat(cert_dict_division).reset_index().fillna(0)
         dfs = dfs.groupby(dfs.columns[:2].to_list(), dropna=False, sort=False).sum()
         columns = [i for i in dfs.columns.to_list() if i in valid_column]
@@ -126,6 +132,13 @@ def analyze_ff_survey_files(
             .map("{:.2%}".format)
         )
         combined[folder.name] = df.reset_index()
+
+    # Report skipped folders
+    if skipped_folders:
+        logging.warning(f"⚠️  Skipped folders in firefighter analysis:")
+        for folder in skipped_folders:
+            logging.warning(f"   - {folder}")
+
     # Only write output if we have data
     if combined:
         params = {
@@ -136,4 +149,6 @@ def analyze_ff_survey_files(
             "folder_path": str(root_data),
         }
         output_as(combined, params)
-    logging.info("All folders processed successfully.")
+        logging.info("All folders processed successfully.")
+    else:
+        logging.warning("⚠️  No data available to write - all folders were skipped or empty")
