@@ -97,9 +97,11 @@ jobs:
       run: |
         python -c "
         from Read_excels_as_one import firefighter_training_survey_main
+        # Use '/Output' to match the hardcoded path in firefighter_training_survey_main
+        # The function currently has hardcoded 'Output' at lines 313 and 323
         firefighter_training_survey_main(
             base='tests/test_data/sample_firefighter_survey',
-            out_rel='/test_output/firefighter'
+            out_rel='/Output'
         )
         print('✓ Firefighter training survey processing completed successfully')
         "
@@ -107,18 +109,27 @@ jobs:
     - name: Verify output files were created
       run: |
         echo "Checking for generated output files..."
+        echo "=== High-tech industry outputs ==="
         ls -lR tests/test_data/sample_company/test_output/ || true
-        ls -lR tests/test_data/sample_firefighter_survey/*/test_output/ || true
+        echo "=== Firefighter survey outputs (city-level) ==="
+        ls -lR tests/test_data/sample_firefighter_survey/*/Output/ || true
+        echo "=== Firefighter survey outputs (aggregated) ==="
+        ls -lR tests/test_data/sample_firefighter_survey/Output/ || true
+        ls -lR tests/test_data/sample_firefighter_survey/Distribution_by_city/ || true
         echo "✓ Tests completed successfully"
 
     - name: Clean up test output directories
       if: always()
       run: |
+        # Clean up high-tech industry outputs
         rm -rf tests/test_data/sample_company/Output
         rm -rf tests/test_data/sample_company/test_output
+        # Clean up firefighter survey outputs
+        # City-level outputs (from step 1): base/city/Output/city/*.xlsx
+        rm -rf tests/test_data/sample_firefighter_survey/*/Output
+        # Aggregated outputs (from step 2 & 3): base/Output/* and base/Distribution_by_city/*
         rm -rf tests/test_data/sample_firefighter_survey/Output
         rm -rf tests/test_data/sample_firefighter_survey/Distribution_by_city
-        rm -rf tests/test_data/sample_firefighter_survey/*/test_output
         echo "✓ Cleaned up test output directories"
 
     - name: Upload test outputs as artifacts
@@ -128,7 +139,9 @@ jobs:
         name: test-outputs
         path: |
           tests/test_data/sample_company/test_output/
-          tests/test_data/sample_firefighter_survey/*/test_output/
+          tests/test_data/sample_firefighter_survey/*/Output/
+          tests/test_data/sample_firefighter_survey/Output/
+          tests/test_data/sample_firefighter_survey/Distribution_by_city/
         retention-days: 7
 
   code-quality:
