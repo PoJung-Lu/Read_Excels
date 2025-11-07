@@ -312,28 +312,28 @@ def firefighter_training_survey_main(
     path_output = out_root
     base_path = base / Path("Output")
     # Only process if Output directory exists
-    if base_path.exists():
-        process_folder_tree(
-            base_path=base_path,
-            out_root=out_root,
-            pattern="default",
-        )
+
+    process_folder_tree(
+        base_path=base_path,
+        out_root=out_root,
+        pattern="default",
+    )
     # 3) 依縣市彙整
     specs = ["化災搶救基礎班", "化災搶救進階班", "化災搶救指揮官班", "化災搶救教官班"]
     out_root = Path("/Output/Distribution_by_city")
     base_path = Path(root_reader.get_path())
     # Only analyze if Output directory exists
-    if (base / "Output").exists():
-        analyze_ff_survey_files(
-            base_path,
-            specs,
-            out_root=out_root,
-            pattern="default",
-            filename="Grouped_data.xlsx",
-        )
+
+    analyze_ff_survey_files(
+        base_path,
+        specs,
+        out_root=out_root,
+        pattern="default",
+        filename="Grouped_data.xlsx",
+    )
 
 
 if __name__ == "__main__":
-    base = "../Data/消防機關救災能量" # "../Test"  # 
+    base = "../Data/消防機關救災能量"  # "../Test"  #
     root_out = "/../Output"
     firefighter_training_survey_main(base, root_out)

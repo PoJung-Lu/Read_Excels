@@ -123,6 +123,7 @@ def analyze_ff_survey_files(
         dfs_sum.loc[("彙整", "未受訓"), :] = dfs_sum.loc[("彙整", "編制數量"), :] - sum(
             dfs_sum.loc[("彙整", cls), :] for cls in training_classes
         )
+        dfs_sum.loc[("彙整", "未受訓"), :] = dfs_sum.loc[("彙整", "未受訓"), :].clip(lower=0)
         df = pd.concat([dfs, dfs_sum])
         df["總計"] = df.sum(axis=1)
         df["比例"] = (
