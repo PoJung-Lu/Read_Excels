@@ -336,6 +336,6 @@ def firefighter_training_survey_main(
 
 
 if __name__ == "__main__":
-    base = "../Test2"  # "../Test"  #"../Data/消防機關救災能量"  #
+    base =  "../Data/消防機關救災能量"  #"../Test"  #
     root_out = "/../Output"
     firefighter_training_survey_main(base, root_out)

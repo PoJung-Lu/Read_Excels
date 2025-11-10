@@ -19,7 +19,7 @@ echo OK - Python found
 echo.
 
 echo [2/4] Installing dependencies...
-pip install pandas>=2.0.0 openpyxl>=3.1.0 pyyaml>=6.0 pyinstaller>=5.0
+pip install pandas>=2.0.0 openpyxl>=3.1.0 pyyaml>=6.0 pyinstaller>=5.0 odfpy>=1.4.0
 if errorlevel 1 (
     echo ERROR: Failed to install packages
     pause
@@ -29,6 +29,7 @@ echo OK - Dependencies installed
 echo.
 
 echo [3/4] Cleaning old builds...
+cd ..
 if exist build rmdir /s /q build
 if exist dist rmdir /s /q dist
 echo OK - Cleanup complete

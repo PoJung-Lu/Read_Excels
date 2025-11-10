@@ -44,11 +44,35 @@ class TextHandler(logging.Handler):
 
     def emit(self, record):
         msg = self.format(record)
-        self.text_widget.configure(state="normal")
-        self.text_widget.insert(tk.END, msg + "\n")
-        self.text_widget.configure(state="disabled")
-        self.text_widget.see(tk.END)
-        self.text_widget.update()
+        try:
+            self.text_widget.configure(state="normal")
+            self.text_widget.insert(tk.END, msg + "\n")
+            self.text_widget.configure(state="disabled")
+            self.text_widget.see(tk.END)
+            self.text_widget.update_idletasks()  # Force GUI update
+        except Exception:
+            pass  # Avoid errors if widget is destroyed
+
+
+class TextRedirector:
+    """Redirect stdout/stderr to tkinter text widget for print statements"""
+
+    def __init__(self, text_widget):
+        self.text_widget = text_widget
+
+    def write(self, message):
+        if message.strip():  # Only write non-empty messages
+            try:
+                self.text_widget.configure(state="normal")
+                self.text_widget.insert(tk.END, message)
+                self.text_widget.configure(state="disabled")
+                self.text_widget.see(tk.END)
+                self.text_widget.update_idletasks()
+            except Exception:
+                pass
+
+    def flush(self):
+        pass  # Required for file-like object interface
 
 
 class ConfigManager:
@@ -244,9 +268,20 @@ class ExcelProcessorGUI:
             button_frame, text="Run Both", command=self.run_both_analyses, width=25
         ).grid(row=0, column=2, padx=5)
 
+        # Verbose logging checkbox
+        verbose_frame = ttk.Frame(main_frame)
+        verbose_frame.grid(row=5, column=0, columnspan=3, pady=5)
+
+        self.verbose_var = tk.BooleanVar(value=False)
+        ttk.Checkbutton(
+            verbose_frame,
+            text="Show detailed logs (including all print statements)",
+            variable=self.verbose_var
+        ).pack()
+
         # Config buttons
         config_button_frame = ttk.Frame(main_frame)
-        config_button_frame.grid(row=5, column=0, columnspan=3, pady=5)
+        config_button_frame.grid(row=6, column=0, columnspan=3, pady=5)
 
         ttk.Button(
             config_button_frame,
@@ -260,7 +295,7 @@ class ExcelProcessorGUI:
 
         # Log output area
         log_frame = ttk.LabelFrame(main_frame, text="Processing Log", padding="10")
-        log_frame.grid(row=6, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S))
+        log_frame.grid(row=7, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S))
 
         self.log_text = scrolledtext.ScrolledText(
             log_frame, height=20, state="disabled", wrap=tk.WORD
@@ -292,6 +327,11 @@ class ExcelProcessorGUI:
         text_handler = TextHandler(self.log_text)
         text_handler.setFormatter(logging.Formatter("%(levelname)s: %(message)s"))
         logger.addHandler(text_handler)
+
+        # If verbose mode is enabled, also redirect stdout/stderr
+        if self.verbose_var.get():
+            sys.stdout = TextRedirector(self.log_text)
+            sys.stderr = TextRedirector(self.log_text)
 
     def resolve_path(self, path_str):
         """Resolve path relative to executable directory"""
