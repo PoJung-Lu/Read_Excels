@@ -202,6 +202,18 @@ jobs:
         ls -lR tests/test_data/sample_firefighter_survey/Distribution_by_city/ || true
         echo "✓ Tests completed successfully"
 
+    - name: Upload test outputs as artifacts
+      if: success()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-outputs
+        path: |
+          tests/test_data/sample_company/test_output/
+          tests/test_data/sample_firefighter_survey/*/Output/
+          tests/test_data/sample_firefighter_survey/Output/
+          tests/test_data/sample_firefighter_survey/Distribution_by_city/
+        retention-days: 7
+
     - name: Clean up test output directories
       if: always()
       run: |
@@ -215,18 +227,6 @@ jobs:
         rm -rf tests/test_data/sample_firefighter_survey/Output
         rm -rf tests/test_data/sample_firefighter_survey/Distribution_by_city
         echo "✓ Cleaned up test output directories"
-
-    - name: Upload test outputs as artifacts
-      if: success()
-      uses: actions/upload-artifact@v4
-      with:
-        name: test-outputs
-        path: |
-          tests/test_data/sample_company/test_output/
-          tests/test_data/sample_firefighter_survey/*/Output/
-          tests/test_data/sample_firefighter_survey/Output/
-          tests/test_data/sample_firefighter_survey/Distribution_by_city/
-        retention-days: 7
 
   code-quality:
     name: Code Quality Checks
