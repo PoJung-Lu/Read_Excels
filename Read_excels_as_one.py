@@ -67,7 +67,6 @@ def process_folder_tree(
         3. Combines data from multiple sheets/files
         4. Outputs consolidated Excel file for each subdirectory
     """
-    # ensure_dir(out_root)
     root_reader = read_data.read_data(
         {"path_data": str(base_path), "path_output": str(out_root), "pattern": pattern}
     )
@@ -337,6 +336,6 @@ def firefighter_training_survey_main(
 
 
 if __name__ == "__main__":
-    base = "../Data/消防機關救災能量"  # "../Test"  #
+    base = "../Test2"  # "../Test"  #"../Data/消防機關救災能量"  #
     root_out = "/../Output"
     firefighter_training_survey_main(base, root_out)

@@ -61,11 +61,18 @@ class read_data:
 
             path = Path(globals()["_dh"][0])
             path = str(path)
-        return (
-            path + "/Data"
-            if not ("path_data" in self.parameters)
-            else path + "/" + self.parameters["path_data"]
-        )
+
+        # Handle path_data parameter
+        if "path_data" in self.parameters:
+            data_path = self.parameters["path_data"]
+            # If it's an absolute path, use it directly (works on Windows and Linux)
+            if os.path.isabs(data_path):
+                return data_path
+            # Otherwise join with base path using os.path.join (cross-platform)
+            return os.path.join(path, data_path)
+        else:
+            # Default to Data subdirectory
+            return os.path.join(path, "Data")
 
     def list_subfiles(self, root: Path, exclude=()) -> list[Path]:
         root = Path(root)
