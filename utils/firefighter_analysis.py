@@ -1,9 +1,11 @@
 """Analysis functions for firefighter rescue capability data processing."""
 
+import logging
 from pathlib import Path
 from typing import Optional, Union
-import logging
+
 import pandas as pd
+
 import utils.read_data as read_data
 from utils.output_excel import output_as
 
@@ -38,6 +40,7 @@ def analyze_ff_survey_files(
     """
     file_name = filename or "Grouped_data.xlsx"
     combined = {}
+    skipped_folders = []
     root_data = Path(str(base_path) + str(out_root.parent))
     print("root_data", root_data)
     valid_column = [
@@ -74,8 +77,13 @@ def analyze_ff_survey_files(
                 for i, j in zip(k, v):
                     if ("基本資料" in i) and ("救災能量" not in i):
                         valid_set = set(valid_column)
-                        dd = {role: [count] for role, count in zip(j["人員編制"], j["編制數量"])}
-                        dd = {k: dd.get(k, [0]) for k in valid_column} | {k: v for k, v in dd.items() if k not in valid_set}
+                        dd = {
+                            role: [count]
+                            for role, count in zip(j["人員編制"], j["編制數量"])
+                        }
+                        dd = {k: dd.get(k, [0]) for k in valid_column} | {
+                            k: v for k, v in dd.items() if k not in valid_set
+                        }
                         df_dict = pd.DataFrame(dd)
                         df_dict.index = pd.MultiIndex.from_tuples([(f, "編制數量")])
                         df_list.append(df_dict)
@@ -101,6 +109,11 @@ def analyze_ff_survey_files(
                     logging.warning(f"No matching data found in {f}; skipping.")
             else:
                 logging.info(f"No data in {f}; skip.")
+
+        if not cert_dict_division:
+            skipped_folders.append(f"{folder.name} (no valid data found)")
+            continue
+
         dfs = pd.concat(cert_dict_division).reset_index().fillna(0)
         dfs = dfs.groupby(dfs.columns[:2].to_list(), dropna=False, sort=False).sum()
         columns = [i for i in dfs.columns.to_list() if i in valid_column]
@@ -117,6 +130,9 @@ def analyze_ff_survey_files(
         dfs_sum.loc[("彙整", "未受訓"), :] = dfs_sum.loc[("彙整", "編制數量"), :] - sum(
             dfs_sum.loc[("彙整", cls), :] for cls in training_classes
         )
+        dfs_sum.loc[("彙整", "未受訓"), :] = dfs_sum.loc[("彙整", "未受訓"), :].clip(
+            lower=0
+        )
         df = pd.concat([dfs, dfs_sum])
         df["總計"] = df.sum(axis=1)
         df["比例"] = (
@@ -126,12 +142,25 @@ def analyze_ff_survey_files(
             .map("{:.2%}".format)
         )
         combined[folder.name] = df.reset_index()
-    params = {
-        "path_data": str(base_path),
-        "file_name": file_name,
-        "pattern": pattern,
-        "output_path": str(base_path) + str(out_root),
-        "folder_path": str(root_data),
-    }
-    output_as(combined, params)
-    logging.info("All folders processed successfully.")
+
+    # Report skipped folders
+    if skipped_folders:
+        logging.warning(f"⚠️  Skipped folders in firefighter analysis:")
+        for folder in skipped_folders:
+            logging.warning(f"   - {folder}")
+
+    # Only write output if we have data
+    if combined:
+        params = {
+            "path_data": str(base_path),
+            "file_name": file_name,
+            "pattern": pattern,
+            "output_path": str(base_path) + str(out_root),
+            "folder_path": str(root_data),
+        }
+        output_as(combined, params)
+        logging.info("All folders processed successfully.")
+    else:
+        logging.warning(
+            "⚠️  No data available to write - all folders were skipped or empty"
+        )

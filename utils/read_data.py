@@ -1,9 +1,9 @@
-import pandas as pd
-import os
-import numpy as np
 import copy
-
+import os
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
 
 
 class read_data:
@@ -46,9 +46,14 @@ class read_data:
 
             # This works when the code is executed as a script
             # path =  os.path.dirname(__file__)#os.getcwd() #
-            path = os.path.abspath(sys.modules["__main__"].__file__).replace(
-                "/Read_excels_as_one.py", ""
-            )
+            try:
+                main_file = sys.modules["__main__"].__file__
+                if main_file is None:
+                    raise AttributeError("__main__.__file__ is None")
+                path = os.path.abspath(main_file).replace("/Read_excels_as_one.py", "")
+            except AttributeError:
+                # When running with python -c, use current working directory
+                path = os.getcwd()
             print("Current working directory:", path)
         except NameError:
             # This works in Jupyter Notebooks
@@ -56,7 +61,6 @@ class read_data:
 
             path = Path(globals()["_dh"][0])
             path = str(path)
-        # except AttributeError:
         return (
             path + "/Data"
             if not ("path_data" in self.parameters)
@@ -117,7 +121,7 @@ class read_data:
     def read_excel_files(self):
         """
         Reads and processes all Excel files from specified directory.
-        
+
         Parameters (via self.parameters):
             folder_path (str): Directory containing Excel files
             pattern (str): Processing pattern to apply

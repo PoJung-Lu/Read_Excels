@@ -1,19 +1,23 @@
-import pandas as pd
-from utils.patterns import merge_sheets_by_group
-import utils.read_data as read_data
-from utils.output_excel import output_as
-from utils.data_cleaners import clean_chems, clean_equipment
-from utils.industry_analysis import analyze_grouped
-from utils.firefighter_analysis import analyze_ff_survey_files
+from __future__ import annotations
+
+import logging
 from collections import defaultdict
 from pathlib import Path
-import logging
 from typing import Optional
+
+import pandas as pd
+
+import utils.read_data as read_data
+from utils.data_cleaners import clean_chems, clean_equipment
+from utils.firefighter_analysis import analyze_ff_survey_files
+from utils.industry_analysis import analyze_grouped
+from utils.output_excel import output_as
+from utils.patterns import merge_sheets_by_group
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 # -------------------- 通用工具 --------------------
-exclude_files = ("Output", "Distribution_by_city")
+exclude_files = ("Output", "Distribution_by_city", "test_output")
 
 
 def ensure_dir(p: Path) -> None:
@@ -91,7 +95,12 @@ def process_folder_tree(
             if isinstance(k, (list, tuple)) and len(k) > 1:
                 [combined[i].append(j.dropna(axis=0, how="all")) for i, j in zip(k, v)]
             elif isinstance(k, (list, tuple)) and len(k) == 1:
-                combined[k[0]].append(v[0])
+                # v is a list when k is a list
+                if isinstance(v, (list, tuple)) and len(v) > 0:
+                    combined[k[0]].append(v[0].dropna(axis=0, how="all"))
+                else:
+                    # Fallback: treat v as a single DataFrame
+                    combined[k[0]].append(v.dropna(axis=0, how="all"))
             elif isinstance(k, str) and k:
                 combined[k].append(v)
             else:
@@ -305,6 +314,8 @@ def firefighter_training_survey_main(
     out_root = "Distribution_by_city"
     path_output = out_root
     base_path = base / Path("Output")
+    # Only process if Output directory exists
+
     process_folder_tree(
         base_path=base_path,
         out_root=out_root,
@@ -314,6 +325,8 @@ def firefighter_training_survey_main(
     specs = ["化災搶救基礎班", "化災搶救進階班", "化災搶救指揮官班", "化災搶救教官班"]
     out_root = Path("/Output/Distribution_by_city")
     base_path = Path(root_reader.get_path())
+    # Only analyze if Output directory exists
+
     analyze_ff_survey_files(
         base_path,
         specs,
@@ -324,6 +337,6 @@ def firefighter_training_survey_main(
 
 
 if __name__ == "__main__":
-    base = "../Data/消防機關救災能量" # "../Test"  # 
+    base = "../Data/消防機關救災能量"  # "../Test"  #
     root_out = "/../Output"
     firefighter_training_survey_main(base, root_out)
