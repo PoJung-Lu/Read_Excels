@@ -1,7 +1,9 @@
 """Basic tests for Read_Excels project"""
-import pytest
-from pathlib import Path
+
 import sys
+from pathlib import Path
+
+import pytest
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -10,9 +12,10 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 def test_imports():
     """Test that main modules can be imported"""
     try:
-        import utils.read_data
-        import utils.patterns
         import utils.output_excel
+        import utils.patterns
+        import utils.read_data
+
         assert True
     except ImportError as e:
         pytest.fail(f"Failed to import modules: {e}")

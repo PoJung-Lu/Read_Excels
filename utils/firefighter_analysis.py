@@ -1,9 +1,11 @@
 """Analysis functions for firefighter rescue capability data processing."""
 
+import logging
 from pathlib import Path
 from typing import Optional, Union
-import logging
+
 import pandas as pd
+
 import utils.read_data as read_data
 from utils.output_excel import output_as
 
@@ -75,8 +77,13 @@ def analyze_ff_survey_files(
                 for i, j in zip(k, v):
                     if ("基本資料" in i) and ("救災能量" not in i):
                         valid_set = set(valid_column)
-                        dd = {role: [count] for role, count in zip(j["人員編制"], j["編制數量"])}
-                        dd = {k: dd.get(k, [0]) for k in valid_column} | {k: v for k, v in dd.items() if k not in valid_set}
+                        dd = {
+                            role: [count]
+                            for role, count in zip(j["人員編制"], j["編制數量"])
+                        }
+                        dd = {k: dd.get(k, [0]) for k in valid_column} | {
+                            k: v for k, v in dd.items() if k not in valid_set
+                        }
                         df_dict = pd.DataFrame(dd)
                         df_dict.index = pd.MultiIndex.from_tuples([(f, "編制數量")])
                         df_list.append(df_dict)
@@ -123,7 +130,9 @@ def analyze_ff_survey_files(
         dfs_sum.loc[("彙整", "未受訓"), :] = dfs_sum.loc[("彙整", "編制數量"), :] - sum(
             dfs_sum.loc[("彙整", cls), :] for cls in training_classes
         )
-        dfs_sum.loc[("彙整", "未受訓"), :] = dfs_sum.loc[("彙整", "未受訓"), :].clip(lower=0)
+        dfs_sum.loc[("彙整", "未受訓"), :] = dfs_sum.loc[("彙整", "未受訓"), :].clip(
+            lower=0
+        )
         df = pd.concat([dfs, dfs_sum])
         df["總計"] = df.sum(axis=1)
         df["比例"] = (
@@ -152,4 +161,6 @@ def analyze_ff_survey_files(
         output_as(combined, params)
         logging.info("All folders processed successfully.")
     else:
-        logging.warning("⚠️  No data available to write - all folders were skipped or empty")
+        logging.warning(
+            "⚠️  No data available to write - all folders were skipped or empty"
+        )

@@ -1,10 +1,13 @@
 """Analysis functions for high-tech industry data processing."""
+
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Optional, Callable
 import logging
+from pathlib import Path
+from typing import Callable, Optional
+
 import pandas as pd
+
 import utils.read_data as read_data
 from utils.output_excel import output_as
 
@@ -59,7 +62,9 @@ def analyze_grouped(
                 continue
             missing_cols = [col for col in sum_cols if col not in df.columns]
             if missing_cols:
-                skipped_sheets.append(f"{k} (missing columns: {', '.join(missing_cols)})")
+                skipped_sheets.append(
+                    f"{k} (missing columns: {', '.join(missing_cols)})"
+                )
                 continue
             g = df.groupby([group_col], dropna=False)[sum_cols].sum().reset_index()
             g = g.sort_values(by=sum_cols[::-1], ascending=[False] * len(sum_cols))

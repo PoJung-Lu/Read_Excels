@@ -1,15 +1,18 @@
 from __future__ import annotations
-import pandas as pd
-from utils.patterns import merge_sheets_by_group
-import utils.read_data as read_data
-from utils.output_excel import output_as
-from utils.data_cleaners import clean_chems, clean_equipment
-from utils.industry_analysis import analyze_grouped
-from utils.firefighter_analysis import analyze_ff_survey_files
+
+import logging
 from collections import defaultdict
 from pathlib import Path
-import logging
 from typing import Optional
+
+import pandas as pd
+
+import utils.read_data as read_data
+from utils.data_cleaners import clean_chems, clean_equipment
+from utils.firefighter_analysis import analyze_ff_survey_files
+from utils.industry_analysis import analyze_grouped
+from utils.output_excel import output_as
+from utils.patterns import merge_sheets_by_group
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
