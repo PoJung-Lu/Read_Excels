@@ -106,7 +106,16 @@ def process_folder_tree(
                 logging.info(f"No data in {f}; skip.")
         combined = {k: pd.concat(v, ignore_index=True) for k, v in combined.items()}
         if len(combined.keys()) >= 1:
-            combined = merge_sheets_by_group(combined)
+            combined = (
+                merge_sheets_by_group(combined)
+                if pattern
+                not in [
+                    "top_ten_operating_chemicals",
+                    "sort_by_location",
+                    "industry_rescue_equipment",
+                ]
+                else combined
+            )
         params["output_path"] = str(base / out_root)
         output_as(combined, params)
     logging.info("All folders processed successfully.")
@@ -336,6 +345,8 @@ def firefighter_training_survey_main(
 
 
 if __name__ == "__main__":
-    base =  "../Data/消防機關救災能量"  #"../Test"  #
+    base = "../Test/科技廠救災能量"  # "../Test"  # "../Data/消防機關救災能量"  # "../Data/科技廠救災能量" #
     root_out = "/../Output"
-    firefighter_training_survey_main(base, root_out)
+    # firefighter_training_survey_main(base, root_out)
+    high_tech_industry_chems_main(base="../Test/科技廠救災能量")
+    high_tech_industry_rescue_equipment_main(base="../Test/科技廠救災能量")

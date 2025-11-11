@@ -22,6 +22,7 @@ import yaml
 from Read_excels_as_one import (
     firefighter_training_survey_main,
     high_tech_industry_rescue_equipment_main,
+    high_tech_industry_chems_main,
 )
 
 
@@ -100,12 +101,12 @@ class ConfigManager:
         return {
             "firefighter": {
                 "base": "./Data/消防機關救災能量",
-                "output": "/Output",
+                "output": "/../Output",
                 "enabled": True,
             },
             "industry": {
-                "base": "./Data/高科技產業",
-                "output": "/Output",
+                "base": "./Data/科技廠救災能量",
+                "output": "/../Output",
                 "enabled": True,
             },
             "general": {"auto_run": False, "show_console": True},
@@ -217,7 +218,7 @@ class ExcelProcessorGUI:
 
         # Industry Analysis Section
         ind_frame = ttk.LabelFrame(
-            main_frame, text="High-Tech Industry Rescue Equipment", padding="10"
+            main_frame, text="High-Tech Industry (Chemical Storage + Rescue Equipment)", padding="10"
         )
         ind_frame.grid(row=3, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=5)
 
@@ -464,6 +465,12 @@ class ExcelProcessorGUI:
             self.log_message(f"Base: {base}", "INFO")
             self.log_message(f"Output: {output}\n", "INFO")
 
+            # Run chemical storage analysis first
+            self.log_message("Step 1: Chemical Storage Analysis", "INFO")
+            high_tech_industry_chems_main(base=base, out_rel=output)
+
+            # Then run rescue equipment analysis
+            self.log_message("\nStep 2: Rescue Equipment Analysis", "INFO")
             high_tech_industry_rescue_equipment_main(base=base, out_rel=output)
 
             self.log_message("\n✓ Industry analysis completed!", "INFO")
@@ -512,6 +519,9 @@ class ExcelProcessorGUI:
                     self.log_message("\n" + "=" * 60, "INFO")
                     self.log_message("INDUSTRY ANALYSIS", "INFO")
                     self.log_message("=" * 60, "INFO")
+                    self.log_message("Step 1: Chemical Storage Analysis", "INFO")
+                    high_tech_industry_chems_main(base=base, out_rel=output)
+                    self.log_message("\nStep 2: Rescue Equipment Analysis", "INFO")
                     high_tech_industry_rescue_equipment_main(base=base, out_rel=output)
                     results.append("✓ Industry analysis completed")
                 else:
