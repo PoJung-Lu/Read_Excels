@@ -135,6 +135,10 @@ class ExcelProcessorGUI:
         self.config_manager = ConfigManager(self.exe_dir / "config.yaml")
         self.config = self.config_manager.config
 
+        # Save original stdout/stderr
+        self.original_stdout = sys.stdout
+        self.original_stderr = sys.stderr
+
         # Configure logging
         self.setup_logging()
 
@@ -332,6 +336,10 @@ class ExcelProcessorGUI:
         if self.verbose_var.get():
             sys.stdout = TextRedirector(self.log_text)
             sys.stderr = TextRedirector(self.log_text)
+        else:
+            # Restore original stdout/stderr when verbose is disabled
+            sys.stdout = self.original_stdout
+            sys.stderr = self.original_stderr
 
     def resolve_path(self, path_str):
         """Resolve path relative to executable directory"""

@@ -3,17 +3,17 @@
 
 # Firefighter Training Survey Settings
 firefighter:
-  base: "./Data/消防機關救災能量"  # Relative to executable location
-  output: "/../Output"             # Relative to base path
-  enabled: true                     # Set to false to skip this analysis
+  base: "./Data/消防機關救災能量" # Relative to executable location
+  output: "/../Output" # Relative to base path
+  enabled: true # Set to false to skip this analysis
 
 # High-Tech Industry Rescue Equipment Settings
 industry:
-  base: "./Data/高科技產業"        # Relative to executable location
-  output: "/../Output"             # Relative to base path
-  enabled: true                     # Set to false to skip this analysis
+  base: "./Data/科技廠救災能量" # Relative to executable location
+  output: "/../Output" # Relative to base path
+  enabled: true # Set to false to skip this analysis
 
 # General Settings
 general:
-  auto_run: false                   # If true, runs analyses automatically on startup
-  show_console: true                # If true, shows detailed console output
+  auto_run: false # If true, runs analyses automatically on startup
+  show_console: true # If true, shows detailed console output
