@@ -37,7 +37,7 @@ echo.
 
 echo [4/4] Building executable...
 echo This takes 2-5 minutes, please wait...
-python -m PyInstaller --noconfirm --onedir --windowed --name ExcelDataProcessor --add-data "config.yaml;." --hidden-import openpyxl --hidden-import openpyxl.cell._writer --hidden-import yaml --hidden-import odf --clean gui_launcher.py
+python -m PyInstaller --noconfirm --onefile --windowed --name ExcelDataProcessor --add-data "config.yaml;." --hidden-import openpyxl --hidden-import openpyxl.cell._writer --hidden-import yaml --hidden-import odf --clean gui_launcher.py
 
 if errorlevel 1 (
     echo ERROR: Build failed
@@ -45,7 +45,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-if not exist "dist\ExcelDataProcessor\ExcelDataProcessor.exe" (
+if not exist "dist\ExcelDataProcessor.exe" (
     echo ERROR: Executable not created
     pause
     exit /b 1
@@ -56,11 +56,11 @@ echo ============================================================
 echo BUILD SUCCESSFUL!
 echo ============================================================
 echo.
-echo Executable folder: dist\ExcelDataProcessor\
-dir dist\ExcelDataProcessor\ExcelDataProcessor.exe
+echo Executable: dist\ExcelDataProcessor.exe
+dir dist\ExcelDataProcessor.exe
 echo.
-echo Next: Copy the entire dist\ExcelDataProcessor folder
-echo       to your deployment location with Data subfolder.
+echo Next: Copy dist\ExcelDataProcessor.exe and config.yaml
+echo       to your deployment folder with Data subfolder.
 echo.
 pause
 exit /b 0
