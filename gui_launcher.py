@@ -191,9 +191,9 @@ class ExcelProcessorGUI:
         self.ff_enabled_var = tk.BooleanVar(
             value=self.config["firefighter"].get("enabled", True)
         )
-        ttk.Checkbutton(
-            ff_frame, text="Enable", variable=self.ff_enabled_var
-        ).grid(row=0, column=0, sticky=tk.W, pady=5)
+        ttk.Checkbutton(ff_frame, text="Enable", variable=self.ff_enabled_var).grid(
+            row=0, column=0, sticky=tk.W, pady=5
+        )
 
         ttk.Label(ff_frame, text="Base Directory:").grid(
             row=1, column=0, sticky=tk.W, pady=5
@@ -218,16 +218,18 @@ class ExcelProcessorGUI:
 
         # Industry Analysis Section
         ind_frame = ttk.LabelFrame(
-            main_frame, text="High-Tech Industry (Chemical Storage + Rescue Equipment)", padding="10"
+            main_frame,
+            text="High-Tech Industry (Chemical Storage + Rescue Equipment)",
+            padding="10",
         )
         ind_frame.grid(row=3, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=5)
 
         self.ind_enabled_var = tk.BooleanVar(
             value=self.config["industry"].get("enabled", True)
         )
-        ttk.Checkbutton(
-            ind_frame, text="Enable", variable=self.ind_enabled_var
-        ).grid(row=0, column=0, sticky=tk.W, pady=5)
+        ttk.Checkbutton(ind_frame, text="Enable", variable=self.ind_enabled_var).grid(
+            row=0, column=0, sticky=tk.W, pady=5
+        )
 
         ttk.Label(ind_frame, text="Base Directory:").grid(
             row=1, column=0, sticky=tk.W, pady=5
@@ -281,7 +283,7 @@ class ExcelProcessorGUI:
         ttk.Checkbutton(
             verbose_frame,
             text="Show detailed logs (including all print statements)",
-            variable=self.verbose_var
+            variable=self.verbose_var,
         ).pack()
 
         # Config buttons
@@ -419,9 +421,7 @@ class ExcelProcessorGUI:
         output = self.ff_output_var.get()
 
         if not Path(base).exists():
-            messagebox.showerror(
-                "Error", f"Base directory does not exist:\n{base}"
-            )
+            messagebox.showerror("Error", f"Base directory does not exist:\n{base}")
             return
 
         try:
@@ -455,9 +455,7 @@ class ExcelProcessorGUI:
         output = self.ind_output_var.get()
 
         if not Path(base).exists():
-            messagebox.showerror(
-                "Error", f"Base directory does not exist:\n{base}"
-            )
+            messagebox.showerror("Error", f"Base directory does not exist:\n{base}")
             return
 
         try:
@@ -471,12 +469,10 @@ class ExcelProcessorGUI:
 
             # Then run rescue equipment analysis
             self.log_message("\nStep 2: Rescue Equipment Analysis", "INFO")
-            high_tech_industry_rescue_equipment_main(base=base, out_rel=output)
+            high_tech_industry_rescue_equipment_main(base=base)
 
             self.log_message("\n✓ Industry analysis completed!", "INFO")
-            messagebox.showinfo(
-                "Success", "Industry analysis completed successfully!"
-            )
+            messagebox.showinfo("Success", "Industry analysis completed successfully!")
         except Exception as e:
             logging.error(f"Error during industry analysis: {str(e)}")
             messagebox.showerror("Error", f"Analysis failed:\n{str(e)}")
@@ -522,7 +518,7 @@ class ExcelProcessorGUI:
                     self.log_message("Step 1: Chemical Storage Analysis", "INFO")
                     high_tech_industry_chems_main(base=base, out_rel=output)
                     self.log_message("\nStep 2: Rescue Equipment Analysis", "INFO")
-                    high_tech_industry_rescue_equipment_main(base=base, out_rel=output)
+                    
                     results.append("✓ Industry analysis completed")
                 else:
                     results.append(f"✗ Industry: Directory not found: {base}")

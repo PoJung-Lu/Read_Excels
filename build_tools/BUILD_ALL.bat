@@ -37,7 +37,7 @@ echo.
 
 echo [4/4] Building executable...
 echo This takes 2-5 minutes, please wait...
-python -m PyInstaller --noconfirm --onefile --windowed --name ExcelDataProcessor --add-data "config.yaml;." --hidden-import openpyxl --hidden-import openpyxl.cell._writer --hidden-import yaml --hidden-import odf --clean gui_launcher.py
+python -m PyInstaller --noconfirm --onefile --windowed --name ExcelDataProcessor --specpath build --add-data "config.yaml;." --hidden-import openpyxl --hidden-import openpyxl.cell._writer --hidden-import yaml --hidden-import odf --clean gui_launcher.py
 
 if errorlevel 1 (
     echo ERROR: Build failed

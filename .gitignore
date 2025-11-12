@@ -9,6 +9,7 @@ build_tools/5.0
 build_tools/1.4.0
 develop-eggs/
 dist/
+*.spec
 downloads/
 eggs/
 .eggs/

@@ -4,7 +4,6 @@ Excel Data Processor - File Structure
 
 ESSENTIAL FILES (Required for Building)
 ----------------------------------------
-✓ BUILD_ALL.bat              - ONE-CLICK BUILD SCRIPT (Run this!)
 ✓ gui_launcher.py            - GUI application with tkinter
 ✓ Read_excels_as_one.py      - Main data processing logic
 ✓ config.yaml                - Configuration file template
@@ -16,22 +15,23 @@ ESSENTIAL FILES (Required for Building)
     ├── output_excel.py
     ├── patterns.py
     └── read_data.py
+✓ build_tools/               - Build system directory
+    ├── BUILD_ALL.bat        - ONE-CLICK BUILD SCRIPT (Run this!)
+    ├── BUILD_INSTRUCTIONS.md - Developer build guide
+    └── GETTING_STARTED.md   - End-user guide
 
 DOCUMENTATION FILES (For Reference)
 -----------------------------------
-✓ GETTING_STARTED.md         - Quick start guide (start here!)
-✓ USER_GUIDE.md              - End-user instructions
-✓ BUILD_INSTRUCTIONS.md      - Detailed build documentation
-✓ EXECUTABLE_README.md       - Technical reference
-✓ README.md                  - Project overview
+✓ README.md                  - Project overview (start here!)
 ✓ CLAUDE.md                  - Claude Code documentation
+✓ FILE_STRUCTURE.txt         - This file
 
-BUILD OUTPUT (Generated, Can Delete)
-------------------------------------
-○ build/                     - Temporary PyInstaller files
+BUILD OUTPUT (Generated - Ignored by Git)
+------------------------------------------
+○ build/                     - Temporary PyInstaller files (includes *.spec)
 ○ dist/                      - Contains ExcelDataProcessor.exe
-○ ExcelDataProcessor.spec    - PyInstaller configuration
-○ __pycache__/              - Python bytecode cache
+○ __pycache__/               - Python bytecode cache
+○ *.spec                     - PyInstaller configuration (in build/ folder)
 
 PROJECT FILES (Development)
 ---------------------------
@@ -44,9 +44,11 @@ HOW TO BUILD THE EXECUTABLE
 ================================================================================
 
 Windows:
-    1. Double-click: BUILD_ALL.bat
-    2. Wait 2-5 minutes
-    3. Find executable in: dist\ExcelDataProcessor.exe
+    1. Open Command Prompt
+    2. Navigate to project root
+    3. Run: build_tools\BUILD_ALL.bat
+    4. Wait 2-5 minutes
+    5. Find executable in: dist\ExcelDataProcessor.exe
 
 That's it!
 
@@ -61,23 +63,7 @@ YourDeploymentFolder/
 ├── config.yaml               (copy from project)
 └── Data/
     ├── 消防機關救災能量/
-    └── 高科技產業/
-
-================================================================================
-WHAT WAS REMOVED (Cleanup)
-================================================================================
-
-Removed redundant files:
-✗ build.bat                  - Replaced by BUILD_ALL.bat
-✗ diagnose.bat               - Integrated into BUILD_ALL.bat
-✗ quick_build.bat            - Replaced by BUILD_ALL.bat
-✗ build_executable.py        - Replaced by BUILD_ALL.bat
-✗ 5.0                        - Accidental file
-
-Why removed?
-- Multiple build scripts were confusing
-- BUILD_ALL.bat does everything in one go
-- No need to run separate diagnose/build steps
+    └── 科技廠救災能量/
 
 ================================================================================
 SIMPLIFIED WORKFLOW
@@ -90,7 +76,9 @@ Before: Multiple steps
   4. Hope it worked
 
 After: One step
-  1. Run BUILD_ALL.bat
+  1. Run build_tools\BUILD_ALL.bat
   Done!
+
+All old build scripts have been consolidated into build_tools/ directory.
 
 ================================================================================

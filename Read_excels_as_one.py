@@ -236,7 +236,7 @@ def high_tech_industry_rescue_equipment_main(
 
     Args:
         base: Base directory containing industrial rescue equipment data
-        out_rel: Relative output directory path for equipment reports
+        # out_rel: Relative output directory path for equipment reports
 
     Workflow:
         1. Process each facility folder using 'industry_rescue_equipment' pattern
@@ -249,6 +249,7 @@ def high_tech_industry_rescue_equipment_main(
     Output:
         Creates categorized Excel files for equipment inventory analysis
     """
+    out_rel = "/Output/Rescue_equipment"
     base_path = Path(base)
     out_root = out_rel.strip("/")
 
@@ -345,8 +346,9 @@ def firefighter_training_survey_main(
 
 
 if __name__ == "__main__":
-    base = "../Test/科技廠救災能量"  # "../Test"  # "../Data/消防機關救災能量"  # "../Data/科技廠救災能量" #
+    base = "../Test2"  # "../Data/消防機關救災能量"  # "../Data/科技廠救災能量" #
     root_out = "/../Output"
-    # firefighter_training_survey_main(base, root_out)
-    high_tech_industry_chems_main(base="../Test/科技廠救災能量")
-    high_tech_industry_rescue_equipment_main(base="../Test/科技廠救災能量")
+
+    firefighter_training_survey_main(base, root_out)
+    # high_tech_industry_chems_main(base="../Test/科技廠救災能量")
+    # high_tech_industry_rescue_equipment_main(base="../Test/科技廠救災能量")
