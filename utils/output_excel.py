@@ -13,14 +13,14 @@ def output_as(data, parameters):
 
     file_name = parameters.get("file_name", "Aggregated_data.xlsx")
     output_path = parameters.get(
-        "output_path", parameters["folder_path"] + "/" + "Output"
+        "output_path", os.path.join(parameters["folder_path"], "Output")
     )
 
     # Ensure the directory exists
     os.makedirs(output_path, exist_ok=True)
     print(f"Data has been written to {output_path}")
     # Write the data to an Excel file
-    with pd.ExcelWriter(output_path + "/" + file_name, engine="openpyxl") as writer:
+    with pd.ExcelWriter(os.path.join(output_path, file_name), engine="openpyxl") as writer:
         # data.to_excel(writer, index=False)
 
         for sheet, sheet_data in data.items():

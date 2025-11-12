@@ -120,6 +120,26 @@ The system generates consolidated Excel files with:
 - Summary statistics and groupby analyses
 - Multi-sheet workbooks for different data dimensions
 
+## Building Executable
+
+### For End Users
+
+A standalone Windows executable is available that doesn't require Python installation:
+
+1. Run `build_tools/BUILD_ALL.bat` from Windows Command Prompt
+2. Find the executable at `dist/ExcelDataProcessor.exe`
+3. Copy `ExcelDataProcessor.exe` and `config.yaml` to your deployment folder
+4. Place your data in a `Data/` subfolder
+
+See `build_tools/GETTING_STARTED.md` for end-user instructions.
+
+### Build Requirements
+
+- Python 3.10+
+- All dependencies from `requirements.txt`
+- PyInstaller 5.0+
+- Windows OS (for building .exe)
+
 ## Development
 
 ### Interactive Development
@@ -139,6 +159,8 @@ python Read_excels_as_one.py
 ```
 Read_Excels/
 ├── Read_excels_as_one.py          # Main entry point and workflows
+├── gui_launcher.py                # GUI application for executable
+├── config.yaml                    # Configuration file for executable
 ├── utils/
 │   ├── read_data.py               # Core data reading class
 │   ├── patterns.py                # Pattern-based extraction logic
@@ -146,7 +168,10 @@ Read_Excels/
 │   ├── data_cleaners.py           # Data cleaning functions
 │   ├── industry_analysis.py       # Industrial data analysis
 │   └── firefighter_analysis.py    # Firefighter survey analysis
-├── Test.ipynb                     # Interactive testing notebook
+├── build_tools/                   # Executable build system
+│   ├── BUILD_ALL.bat              # One-click build script
+│   ├── BUILD_INSTRUCTIONS.md      # Developer build guide
+│   └── GETTING_STARTED.md         # End-user guide
 ├── CLAUDE.md                      # AI assistant documentation
 └── README.md                      # This file
 ```

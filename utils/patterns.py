@@ -314,7 +314,7 @@ def other_pattern(self, keys, values, pattern):
         for i, j in zip(keys, values):
             if ("基本資料" in i) & (len(i) < 31):
                 sheet_name = i  # j.iloc[1, 6]
-                if sheet_name and str(sheet_name) == "nan":
+                if sheet_name or str(sheet_name) == "nan":
                     sheet_name = j.iloc[1, 6]
                 df_keys.append(sheet_name)
                 index_title = [[1, 1, 2, 3, 4, 3, 4], [0, 4, 0, 0, 0, 4, 4]]

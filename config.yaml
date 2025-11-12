@@ -1,0 +1,19 @@
+# Configuration file for Excel Data Processing Application
+# Place this file in the same directory as the executable
+
+# Firefighter Training Survey Settings
+firefighter:
+  base: "./Data/消防機關救災能量" # Relative to executable location
+  output: "/../Output" # Relative to base path
+  enabled: true # Set to false to skip this analysis
+
+# High-Tech Industry Analysis (Chemical Storage + Rescue Equipment)
+industry:
+  base: "./Data/科技廠救災能量" # Relative to executable location
+  output: "/Output" # Relative to base path
+  enabled: true # Set to false to skip this analysis
+
+# General Settings
+general:
+  auto_run: false # If true, runs analyses automatically on startup
+  show_console: true # If true, shows detailed console output
